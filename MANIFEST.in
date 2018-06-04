@@ -1,0 +1,4 @@
+include flask_label/schema.sql
+graft flask_label/static
+graft flask_label/templates
+global-exclude *.pyc

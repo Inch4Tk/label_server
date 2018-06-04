@@ -1,0 +1,38 @@
+{% extends 'layout.html' %}
+
+{% block header %}
+  <h1>{% block title %}Batch Overview{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div>
+    <h2>Image Label Batches</h2>
+    <ul>
+        {% for img_batch in img_batches %}
+          <li>
+            {{ img_batch["id"] }}:
+            <a href="{{ url_for('label_images.label_batch_overview', batch_id=img_batch['id']) }}">
+              {{ img_batch["dirname"] }}
+            </a>.
+            Images: {{ img_batch["img_count"] }},
+            Labels: {{ img_batch["labeled_count"] }},
+            Percentage: {{ img_batch["labeled_count"] / img_batch["img_count"] * 100 }}%
+          </li>
+        {% endfor %}
+    </ul>
+  </div>
+  <div>
+      <h2>Video Label Batches</h2>
+      <ul>
+          {% for video_batch in video_batches %}
+            <li>
+              {{ video_batch["id"] }}:
+              <a href="">
+                {{ video_batch["dir"] }}
+              </a>
+            </li>
+          {% endfor %}
+      </ul>
+  </div>
+
+{% endblock %}

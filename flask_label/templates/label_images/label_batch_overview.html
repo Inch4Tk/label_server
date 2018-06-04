@@ -1,0 +1,30 @@
+{% extends 'layout.html' %}
+
+{% block header %}
+  <h1>{% block title %}Batch {{ img_batch["dirname"] }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <a href="/">Back</a>
+  <a href="{{ url_for('label_images.next_task', batch_id=img_batch['id']) }}">Start labeling</a>
+  <div>
+      <h2>Statistics</h2>
+      <p>
+          Images: {{ img_batch["img_count"] }}<br/>
+          Labels: {{ img_batch["labeled_count"] }}<br/>
+          Percentage: {{ img_batch["labeled_count"] / img_batch["img_count"] * 100 }}%
+      </p>
+  </div>
+  <div>
+    <h2>Image Task List</h2>
+    <ul>
+      {% for task in img_tasks %}
+        <li>
+          <a href="{{ url_for('label_images.label_task', batch_id=img_batch['id'], task_id=task['id']) }}">{{ task["id"] }}</a>:
+            {{ task["filename"] }}, Labeled: {{ task["is_labeled"] }}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <a href="/">Back</a>
+{% endblock %}

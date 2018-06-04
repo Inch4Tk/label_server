@@ -1,0 +1,11 @@
+name: flask_label
+dependencies:
+  - python=3.6.5
+  - pip
+  - pip:
+    - autopep8
+    - pylint
+    - pytest
+    - coverage
+    - python-dotenv
+    - -e .

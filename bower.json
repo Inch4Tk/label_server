@@ -1,0 +1,21 @@
+{
+  "name": "label_server",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "Tobias Gottwald <tobias.gottwald@gastrobotics.de>"
+  ],
+  "license": "ISC",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^4.1.1",
+    "react": "^16.1.0"
+  }
+}
