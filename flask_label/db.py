@@ -63,13 +63,14 @@ def init_db_imgfiles(db):
         if not os.path.isdir(label_dirname):
             os.makedirs(label_dirname)
 
-        _, _, labels=next(os.walk(label_dirname))
+        _, _, labels = next(os.walk(label_dirname))
         # Take only those labels that are xml files, stuff them in dict for fast access
         labels_no_fileending = {x.split(".")[0]:True for x in labels \
                                if x.split(".")[1] in current_app.config["VALID_LABEL_FILE_ENDINGS"]}
 
         # All images
         _, _, files = next(os.walk(os.path.join(image_dir, d)))
+        files.sort()
         for f in files:
             splits = f.split(".")
             f_no_fileending = splits[0]

@@ -1,5 +1,4 @@
 import pytest
-from flask_label.db import get_db
 
 
 def test_index(client, auth):
