@@ -48,7 +48,5 @@ def create_app(app_config=None):
     app.register_blueprint(label_images.bp)
     from . import api
     app.register_blueprint(api.bp)
-    # from . import blog
-    # app.register_blueprint(blog.bp)
 
     return app
