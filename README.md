@@ -1,1 +1,1 @@
-label_server
+This Code is provided under the MIT License, see LICENSE.
