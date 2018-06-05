@@ -1,0 +1,3 @@
+FLASK_APP=label_server
+FLASK_ENV=development
+FLASK_DEBUG=1
