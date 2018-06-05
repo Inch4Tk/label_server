@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS post;
-DROP TABLE IF EXISTS image_label;
+DROP TABLE IF EXISTS image_task;
 DROP TABLE IF EXISTS image_batch;
 DROP TABLE IF EXISTS video_batch;
 
