@@ -30,7 +30,18 @@ def init_db():
 
 
 def init_db_imgfiles(db):
-    """Initialize database with img files."""
+    """Initialize database with img files.
+
+    The idea is to look for all subdirs of the image folder, which is in the instance folder.
+    Then add one label batch entry to the database for every folder.
+    Then fetch all the labels from the labels subfolder. Add those labels to the database.
+    Then fetch all image files. Add them to the db, set values depending on if they are or not labeled.
+
+    Labels need to have the same name as images. (except fileending)
+    The folder names are configured in instance/config.py.
+    Defaults are defined in label_server/config.py.
+
+    """
     image_dir = os.path.join(current_app.instance_path, current_app.config["IMAGE_DIR"])
     if not os.path.isdir(image_dir):
         os.makedirs(image_dir)
