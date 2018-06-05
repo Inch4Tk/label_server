@@ -15,7 +15,7 @@ def init_db():
 
     # Setup our userbase
     users = [
-        ("herp", "hard_to_crack_password")
+        ("test", "test")
     ]
     for user in users:
         db.execute(
