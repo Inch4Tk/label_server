@@ -13,16 +13,19 @@ def init_db():
     with current_app.open_resource("schema.sql") as f:
         db.executescript(f.read().decode("utf8"))
 
-    # Setup our userbase
-    users = [
-        ("herp", "hard_to_crack_password")
-    ]
-    for user in users:
-        db.execute(
-                    "INSERT INTO user (username, password) VALUES (?, ?)",
-                    (user[0], generate_password_hash(user[1]))
-        )
+    with current_app.open_resource("default_users.sql") as f:
+        db.executescript(f.read().decode("utf8"))
+
     db.commit()
+
+
+def update_task_db():
+    """Updates the database for batches and labeling tasks, based on the instance folder."""
+    db = get_db()
+
+    # Clear stuff from database
+    with current_app.open_resource("update_task.sql") as f:
+        db.executescript(f.read().decode("utf8"))
 
     # Load all files from the images/videos instance folders and save them to db
     init_db_imgfiles(db)
@@ -30,7 +33,18 @@ def init_db():
 
 
 def init_db_imgfiles(db):
-    """Initialize database with img files."""
+    """Initialize database with img files.
+
+    The idea is to look for all subdirs of the image folder, which is in the instance folder.
+    Then add one label batch entry to the database for every folder.
+    Then fetch all the labels from the labels subfolder. Add those labels to the database.
+    Then fetch all image files. Add them to the db, set values depending on if they are or not labeled.
+
+    Labels need to have the same name as images. (except fileending)
+    The folder names are configured in instance/config.py.
+    Defaults are defined in label_server/config.py.
+
+    """
     image_dir = os.path.join(current_app.instance_path, current_app.config["IMAGE_DIR"])
     if not os.path.isdir(image_dir):
         os.makedirs(image_dir)
@@ -49,13 +63,14 @@ def init_db_imgfiles(db):
         if not os.path.isdir(label_dirname):
             os.makedirs(label_dirname)
 
-        _, _, labels=next(os.walk(label_dirname))
+        _, _, labels = next(os.walk(label_dirname))
         # Take only those labels that are xml files, stuff them in dict for fast access
         labels_no_fileending = {x.split(".")[0]:True for x in labels \
                                if x.split(".")[1] in current_app.config["VALID_LABEL_FILE_ENDINGS"]}
 
         # All images
         _, _, files = next(os.walk(os.path.join(image_dir, d)))
+        files.sort()
         for f in files:
             splits = f.split(".")
             f_no_fileending = splits[0]
@@ -102,11 +117,20 @@ def init_db_command():
     init_db()
     click.echo("Initialized the database.")
 
+@click.command("update-task-db")
+@with_appcontext
+def update_task_db_command():
+    """Clear existing batches and tasks tables, then fill it based on info in the instance folder."""
+
+    update_task_db()
+    click.echo("Updated the batch and tasks in the database.")
+
 def init_app(app):
     """Register with the application instance."""
 
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(update_task_db_command)
 
 def get_db():
     """Get the Database.

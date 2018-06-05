@@ -3,7 +3,7 @@ import tempfile
 import pytest
 
 from flask_label import create_app
-from flask_label.db import get_db, init_db
+from flask_label.db import get_db, init_db, update_task_db
 import flask_label.config
 
 with open(os.path.join(os.path.dirname(__file__), "data.sql"), "rb") as f:
@@ -19,6 +19,7 @@ def app():
 
     with app.app_context():
         init_db()
+        update_task_db()
         get_db().executescript(_data_sql)
 
     yield app

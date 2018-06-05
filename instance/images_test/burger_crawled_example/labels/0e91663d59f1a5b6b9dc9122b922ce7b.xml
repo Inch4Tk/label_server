@@ -1,0 +1,26 @@
+<annotation>
+	<folder>converted_data</folder>
+	<filename>0e91663d59f1a5b6b9dc9122b922ce7b.png</filename>
+	<path>C:\Partition\Code\gastrobotics\gastro_labels\converted_data\0e91663d59f1a5b6b9dc9122b922ce7b.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>593</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>burger_raw</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>20</xmin>
+			<ymin>174</ymin>
+			<xmax>565</xmax>
+			<ymax>532</ymax>
+		</bndbox>
+	</object>
+</annotation>

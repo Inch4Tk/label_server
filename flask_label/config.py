@@ -26,3 +26,5 @@ class Dev(Config):
 class Testing(Config):
     """Test Configurations."""
     TESTING = True
+    IMAGE_DIR = "images_test"
+    VIDEO_DIR = "videos_test"

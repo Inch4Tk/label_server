@@ -1,6 +1,9 @@
 package-lock.json
 __pycache__
 *.egg-info
+.pytest_cache/
 
 node_modules/
 bower_components/
+
+instance/

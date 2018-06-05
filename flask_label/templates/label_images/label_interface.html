@@ -6,13 +6,13 @@
 
 {% block content %}
     <h2>Label Image {{ img_task['id'] }}: {{ img_task['filename'] }}</h2>
-    <a href="/">Back</a>
+    <a href="{{ url_for('label_images.label_batch_overview', batch_id=batch_id) }}">Back</a>
     <a href="{{ url_for('label_images.next_task', batch_id=batch_id) }}">Next</a>
     <p>Link to image: {{ url_for('api.serve_image', img_id=img_task['id']) }}</p>
     <p>
         <img src="{{ url_for('api.serve_image', img_id=img_task['id']) }}" alt="Image to Label"/>
     </p>
-    <a href="/">Back</a>
+    <a href="{{ url_for('label_images.label_batch_overview', batch_id=batch_id) }}">Back</a>
 {% endblock %}
 
 <!-- <!DOCTYPE html>
