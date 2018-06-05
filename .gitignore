@@ -1,0 +1,6 @@
+package-lock.json
+__pycache__
+*.egg-info
+
+node_modules/
+bower_components/
