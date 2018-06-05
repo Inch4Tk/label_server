@@ -13,15 +13,9 @@ def init_db():
     with current_app.open_resource("schema.sql") as f:
         db.executescript(f.read().decode("utf8"))
 
-    # Setup our userbase
-    users = [
-        ("test", "test")
-    ]
-    for user in users:
-        db.execute(
-                    "INSERT INTO user (username, password) VALUES (?, ?)",
-                    (user[0], generate_password_hash(user[1]))
-        )
+    with current_app.open_resource("default_users.sql") as f:
+        db.executescript(f.read().decode("utf8"))
+
     db.commit()
 
 
