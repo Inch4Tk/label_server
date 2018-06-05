@@ -24,6 +24,15 @@ def init_db():
         )
     db.commit()
 
+
+def update_task_db():
+    """Updates the database for batches and labeling tasks, based on the instance folder."""
+    db = get_db()
+
+    # Clear stuff from database
+    with current_app.open_resource("update_task.sql") as f:
+        db.executescript(f.read().decode("utf8"))
+
     # Load all files from the images/videos instance folders and save them to db
     init_db_imgfiles(db)
     init_db_videofiles(db)
@@ -113,11 +122,20 @@ def init_db_command():
     init_db()
     click.echo("Initialized the database.")
 
+@click.command("update-task-db")
+@with_appcontext
+def update_task_db_command():
+    """Clear existing batches and tasks tables, then fill it based on info in the instance folder."""
+
+    update_task_db()
+    click.echo("Updated the batch and tasks in the database.")
+
 def init_app(app):
     """Register with the application instance."""
 
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(update_task_db_command)
 
 def get_db():
     """Get the Database.
