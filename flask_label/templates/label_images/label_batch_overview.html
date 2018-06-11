@@ -20,7 +20,7 @@
     <ul>
       {% for task in img_tasks %}
         <li>
-          <a href="{{ url_for('label_images.label_task', batch_id=img_batch['id'], task_id=task['id']) }}">{{ task["id"] }}</a>:
+          <a href="{{ url_for('label_images.label_task', batch_id=img_batch['id'], task_id=task['id']) }}">{{ loop.index }}({{ task["id"] }})</a>:
             {{ task["filename"] }}, Labeled: {{ task["is_labeled"] }}
         </li>
       {% endfor %}

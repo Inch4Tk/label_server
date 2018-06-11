@@ -15,12 +15,19 @@
     "gulp": "^3.9.1",
     "gulp-browser": "^3.0.11",
     "gulp-size": "^3.0.0",
-    "reactify": "^1.1.1"
+    "gulp-concat": "^2.6.1",
+    "gulp-sourcemaps": "^2.6.4",
+    "gulp-sass": "^4.0.1",
+    "gulp-autoprefixer": "^5.0.0",
+    "babelify": "^8.0.0",
+    "babel-core": "^6.23.3",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-react": "^6.24.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "bower": "bower"
   },
   "author": "",
-  "license": "ISC"
+  "license": "MIT"
 }
