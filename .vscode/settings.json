@@ -1,0 +1,12 @@
+{
+    "files.exclude": {
+        "**/.git": true,         // this is a default value
+        "**/.DS_Store": true,    // this is a default value
+
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/htmlcov": true,
+        "**/instance": true,
+        "**/flask_label.egg-info": true,
+    }
+}
