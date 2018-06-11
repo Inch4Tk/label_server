@@ -19,7 +19,7 @@ let transforms = [
 ];
 
 gulp.task("transform-jsx", function () {
-    var stream = gulp.src("./flask_label/static/jsx/*.js")
+    var stream = gulp.src(["./flask_label/static/jsx/*.jsx", "./flask_label/static/jsx/*.js"])
       .pipe(gulpBrowser.browserify(transforms))
       .pipe(concat("app.js"))
       .pipe(gulp.dest("./flask_label/static/dist/js/"))
