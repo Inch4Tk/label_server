@@ -4,8 +4,6 @@
     <meta charset="utf-8"><!-- html5 version of http-equiv="Content-Type"... -->
     <meta name="description" content="{{ description }}">
     <meta name="keywords" content="{{ keywords }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/vendor.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/app.css') }}">
     <link rel="canonical" href="{{ pageUrl }}" />
 </head>
 <body>
@@ -30,6 +28,5 @@
       {% endfor %}
       {% block content %}{% endblock %}
     </section>
-    <script type="text/javascript" src="{{ url_for('static', filename='dist/js/vendor.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='dist/js/app.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='dist/bundle.js') }}"></script>
 </body>

@@ -1,3 +1,7 @@
+// SCSS Assets
+import "./../scss/app.scss"
+
+// JS Assets
 import React from 'react';
 import ReactDOM from 'react-dom';
 
