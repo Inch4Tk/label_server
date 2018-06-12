@@ -10,6 +10,7 @@ class ImageTask(db.Model):
     filename = db.Column(db.Text, nullable=False)
     is_labeled = db.Column(db.Boolean, nullable=False)
     batch_id = db.Column(db.Integer, db.ForeignKey("image_batch.id"), nullable=False)
+    batch = db.relationship("ImageBatch", backref=db.backref("tasks", lazy=True))
 
 class ImageBatch(db.Model):
     id = db.Column(db.Integer, primary_key=True)

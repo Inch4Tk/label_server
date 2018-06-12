@@ -1,6 +1,7 @@
 import os
 import click
 from flask.cli import with_appcontext
+from flask import current_app
 
 from .database import db
 from .models import User, ImageTask, ImageBatch, VideoBatch
@@ -14,8 +15,8 @@ def db_init_users():
 
     meta = db.metadata
     for table in reversed(meta.sorted_tables):
-        if table == "user":
-            session.execute(table.delete())
+        if table.name == "user":
+            db.session.execute(table.delete())
 
     test_user = User(username="test", password="pbkdf2:sha256:50000$be1GSrVN$138ec4c121339bc34d64527f6210ac1e6e8eab6792662e95532382db7ece2adf")
     db.session.add(test_user)
@@ -28,8 +29,9 @@ def db_update_task():
     # Clear stuff from database
     meta = db.metadata
     for table in reversed(meta.sorted_tables):
-        if table == "image_task" or table == "image_batch" or table == "video_batch":
-            session.execute(table.delete())
+        tn = table.name
+        if tn == "image_task" or tn == "image_batch" or tn == "video_batch":
+            db.session.execute(table.delete())
 
     # Load all files from the images/videos instance folders and save them to db
     db_init_imgfiles(db)
@@ -54,13 +56,8 @@ def db_init_imgfiles(db):
         os.makedirs(image_dir)
 
     _, subdirs, _ = next(os.walk(image_dir))
-    db_cur = db.cursor()
     for d in subdirs:
-        db_cur.execute(
-            "INSERT INTO image_batch (dirname) VALUES (?)",
-            (d, )
-        )
-        batch_id = db_cur.lastrowid
+        image_batch = ImageBatch(dirname=d)
 
         # ALl labels
         label_dirname = os.path.join(image_dir, d, current_app.config["IMAGE_LABEL_SUBDIR"])
@@ -88,12 +85,10 @@ def db_init_imgfiles(db):
             if f_no_fileending in labels_no_fileending:
                 is_labeled = True
             # Insert the image + label into db
-            db_cur.execute(
-                "INSERT INTO image_task (filename, is_labeled, batch_id) VALUES (?, ?, ?)",
-                (f, is_labeled, batch_id)
-            )
+            image_batch.tasks.append(ImageTask(filename=f, is_labeled=is_labeled))
 
-        db.commit()
+        db.session.add(image_batch)
+        db.session.commit()
 
 def db_init_videofiles(db):
     """Initialize database with videofiles."""
@@ -102,15 +97,11 @@ def db_init_videofiles(db):
         os.makedirs(video_dir)
 
     _, subdirs, _ = next(os.walk(video_dir))
-    db_cur = db.cursor()
     for d in subdirs:
-        db_cur.execute(
-            "INSERT INTO video_batch (dirname) VALUES (?)",
-            (d, )
-        )
-        batch_id = db_cur.lastrowid
+        video_batch = VideoBatch(dirname=d)
 
-        db.commit()
+        db.session.add(video_batch)
+        db.session.commit()
 
 
 @click.command("db-init-user")
