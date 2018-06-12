@@ -18,7 +18,7 @@
     <div>
         <h2>Image Task List</h2>
         <ul>
-            {% for task in img_tasks %}
+            {% for task in img_batch["tasks"] %}
             <li>
                 <a href="{{ url_for('label_images.label_task', batch_id=img_batch['id'], task_id=task['id']) }}">{{ loop.index }} ({{ task["id"] }})</a>: {{ task["filename"] }}, Labeled: {{ task["is_labeled"] }}
             </li>
