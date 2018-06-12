@@ -40,7 +40,7 @@ def create_app(app_config=None):
     db.init_app(app)
     migrate.init_app(app, db=db)
 
-    from .database_cli import init_db_cli
+    from flask_label.database_cli import init_db_cli
     init_db_cli(app)
 
     # Register Blueprints

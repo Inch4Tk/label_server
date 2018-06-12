@@ -3,8 +3,8 @@ import click
 from flask.cli import with_appcontext
 from flask import current_app
 
-from .database import db
-from .models import User, ImageTask, ImageBatch, VideoBatch
+from flask_label.database import db
+from flask_label.models import User, ImageTask, ImageBatch, VideoBatch
 
 def db_drop_all():
     """Drops all tables."""
