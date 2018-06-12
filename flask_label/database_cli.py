@@ -1,38 +1,42 @@
-import sqlite3
-
 import os
 import click
-from flask import current_app, g
 from flask.cli import with_appcontext
-from werkzeug.security import generate_password_hash
 
-def init_db():
+from .database import db
+from .models import User, ImageTask, ImageBatch, VideoBatch
+
+def db_drop_all():
+    """Drops all tables."""
+    db.drop_all()
+
+def db_init_users():
     """Initialize the Database with tables, users and uses files from instance for labels."""
 
-    db = get_db()
-    with current_app.open_resource("schema.sql") as f:
-        db.executescript(f.read().decode("utf8"))
+    meta = db.metadata
+    for table in reversed(meta.sorted_tables):
+        if table == "user":
+            session.execute(table.delete())
 
-    with current_app.open_resource("default_users.sql") as f:
-        db.executescript(f.read().decode("utf8"))
+    test_user = User(username="test", password="pbkdf2:sha256:50000$be1GSrVN$138ec4c121339bc34d64527f6210ac1e6e8eab6792662e95532382db7ece2adf")
+    db.session.add(test_user)
+    db.session.commit()
 
-    db.commit()
 
-
-def update_task_db():
+def db_update_task():
     """Updates the database for batches and labeling tasks, based on the instance folder."""
-    db = get_db()
 
     # Clear stuff from database
-    with current_app.open_resource("update_task.sql") as f:
-        db.executescript(f.read().decode("utf8"))
+    meta = db.metadata
+    for table in reversed(meta.sorted_tables):
+        if table == "image_task" or table == "image_batch" or table == "video_batch":
+            session.execute(table.delete())
 
     # Load all files from the images/videos instance folders and save them to db
-    init_db_imgfiles(db)
-    init_db_videofiles(db)
+    db_init_imgfiles(db)
+    db_init_videofiles(db)
 
 
-def init_db_imgfiles(db):
+def db_init_imgfiles(db):
     """Initialize database with img files.
 
     The idea is to look for all subdirs of the image folder, which is in the instance folder.
@@ -91,7 +95,7 @@ def init_db_imgfiles(db):
 
         db.commit()
 
-def init_db_videofiles(db):
+def db_init_videofiles(db):
     """Initialize database with videofiles."""
     video_dir = os.path.join(current_app.instance_path, current_app.config["VIDEO_DIR"])
     if not os.path.isdir(video_dir):
@@ -109,48 +113,29 @@ def init_db_videofiles(db):
         db.commit()
 
 
-@click.command("init-db")
+@click.command("db-init-user")
 @with_appcontext
-def init_db_command():
-    """Clear the existing data and create new tables."""
+def db_init_user_command():
+    """Clear the existing user data and set users"""
+    db_init_users()
+    click.echo("Initialized the User database.")
 
-    init_db()
-    click.echo("Initialized the database.")
-
-@click.command("update-task-db")
+@click.command("db-update-task")
 @with_appcontext
-def update_task_db_command():
+def db_update_task_command():
     """Clear existing batches and tasks tables, then fill it based on info in the instance folder."""
-
-    update_task_db()
+    db_update_task()
     click.echo("Updated the batch and tasks in the database.")
 
-def init_app(app):
+@click.command("db-drop-all")
+@with_appcontext
+def db_drop_all_command():
+    """Clear everything"""
+    db_drop_all()
+    click.echo("Cleared the whole db.")
+
+def init_db_cli(app):
     """Register with the application instance."""
-
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
-    app.cli.add_command(update_task_db_command)
-
-def get_db():
-    """Get the Database.
-
-    Returns:
-        db: Database
-    """
-
-    if "db" not in g:
-        g.db = sqlite3.connect(
-            current_app.config["DATABASE"],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
-
-    return g.db
-
-def close_db(e=None):
-    """Close the Database."""
-
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+    app.cli.add_command(db_init_user_command)
+    app.cli.add_command(db_update_task_command)
+    app.cli.add_command(db_drop_all_command)
