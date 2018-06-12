@@ -6,7 +6,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import abort
 
-from flask_label.database import db
+from .models import User
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -48,18 +48,16 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         error = None
-        user = db.execute(
-            "SELECT * FROM user WHERE username = ?", (username,)
-        ).fetchone()
+        user = User.query.filter_by(username=username).first()
 
         if user is None:
             error = "Incorrect username."
-        elif not check_password_hash(user["password"], password):
+        elif not check_password_hash(user.password, password):
             error = "Incorrect password."
 
         if error is None:
             session.clear()
-            session["user_id"] = user["id"]
+            session["user_id"] = user.id
             current_app.logger.info('%s logged in successfully', username)
             return redirect(url_for("index"))
         else:
@@ -77,9 +75,7 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = db.execute(
-            "SELECT * FROM user WHERE id = ?", (user_id,)
-        ).fetchone()
+        g.user = User.query.filter_by(id=user_id).first()
 
 @bp.route("/logout")
 def logout():
