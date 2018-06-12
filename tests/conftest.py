@@ -3,7 +3,7 @@ import tempfile
 import pytest
 
 from flask_label import create_app
-from flask_label.db import get_db, init_db, update_task_db
+from flask_label.database_cli import db_init_users, db_update_task
 import flask_label.config
 
 with open(os.path.join(os.path.dirname(__file__), "data.sql"), "rb") as f:
@@ -15,12 +15,14 @@ def app():
     DATABASE_FILEDESCRIPTOR, DATABASE = tempfile.mkstemp()
     test_config = flask_label.config.Testing()
     test_config.DATABASE = DATABASE
+    test_config.SQLALCHEMY_DATABASE_URI = "sqlite:////{}".format(DATABASE)
     app = create_app(test_config)
 
     with app.app_context():
-        init_db()
-        update_task_db()
-        get_db().executescript(_data_sql)
+        from flask_migrate import upgrade as _upgrade
+        _upgrade()
+        db_init_users()
+        db_update_task()
 
     yield app
 

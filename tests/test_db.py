@@ -1,28 +1,42 @@
 import sqlite3
 
 import pytest
-from flask_label.db import get_db
 
 
-def test_get_close_db(app):
-    with app.app_context():
-        db = get_db()
-        assert db is get_db()
-
-    with pytest.raises(sqlite3.ProgrammingError) as e:
-        db.execute("SELECT 1")
-
-    assert "closed" in str(e)
-
-
-def test_init_db_command(runner, monkeypatch):
+def test_db_init_user_command(runner, monkeypatch):
     class Recorder(object):
         called = False
 
-    def fake_init_db():
+    def fake_db_init_user():
         Recorder.called = True
 
-    monkeypatch.setattr("flask_label.db.init_db", fake_init_db)
-    result = runner.invoke(args=["init-db"])
+    monkeypatch.setattr("flask_label.database_cli.db_init_users", fake_db_init_user)
+    result = runner.invoke(args=["db-init-user"])
     assert "Initialized" in result.output
+    assert Recorder.called
+
+
+def test_db_update_task_command(runner, monkeypatch):
+    class Recorder(object):
+        called = False
+
+    def fake_db_update_task():
+        Recorder.called = True
+
+    monkeypatch.setattr("flask_label.database_cli.db_update_task", fake_db_update_task)
+    result = runner.invoke(args=["db-update-task"])
+    assert "Updated" in result.output
+    assert Recorder.called
+
+
+def test_db_drop_all_command(runner, monkeypatch):
+    class Recorder(object):
+        called = False
+
+    def fake_db_drop_all():
+        Recorder.called = True
+
+    monkeypatch.setattr("flask_label.database_cli.db_drop_all", fake_db_drop_all)
+    result = runner.invoke(args=["db-drop-all"])
+    assert "Cleared" in result.output
     assert Recorder.called
