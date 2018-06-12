@@ -9,6 +9,7 @@ setup(
     install_requires=[
         "flask==1.0.2",
         "flask-script",
-        "flask-sqlalchemy"
+        "flask-sqlalchemy",
+        "flask-migrate"
     ],
 )

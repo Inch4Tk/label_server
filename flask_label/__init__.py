@@ -38,6 +38,8 @@ def create_app(app_config=None):
     from .database import db, migrate
     db.app = app
     db.init_app(app)
+    migrate.init_app(app, db=db)
+
 
     # Register Blueprints
     from . import auth
