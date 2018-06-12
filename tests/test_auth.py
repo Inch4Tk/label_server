@@ -1,6 +1,6 @@
 import pytest
 from flask import g, session
-from flask_label.db import get_db
+from flask_label.database import db
 
 
 def test_register(client, app):
@@ -37,7 +37,7 @@ def test_login(client, auth):
     with client:
         client.get("/")
         assert session["user_id"] == 1
-        assert g.user["username"] == "test"
+        assert g.user.username == "test"
 
 
 @pytest.mark.parametrize(("username", "password", "message"), (

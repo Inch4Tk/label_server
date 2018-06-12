@@ -1,5 +1,5 @@
 import pytest
-from flask_label.db import get_db
+from flask_label.database import db
 
 @pytest.mark.parametrize("path", (
     "/label_images/1/",
@@ -19,11 +19,11 @@ def test_task_overview(client, auth):
     assert b"Labels: 5" in response.data
     assert b"Percentage: 100.0" in response.data
 
-    assert b"0a5a79b07ac1b11b1f353c792411bc02.png, Labeled: 1" in response.data
+    assert b"0a5a79b07ac1b11b1f353c792411bc02.png, Labeled: True" in response.data
     assert b"" in response.data
 
     response = client.get("/label_images/2/")
-    assert b"0Q0HfMGgJJU1.png, Labeled: 0" in response.data
+    assert b"0Q0HfMGgJJU1.png, Labeled: False" in response.data
 
     assert b'href="/">Back' in response.data
     assert b'href="/label_images/2/next/"' in response.data

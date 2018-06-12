@@ -11,15 +11,10 @@ def create_app(app_config=None):
 
     # Create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    db_path = os.path.join(app.instance_path, "flask_label.sqlite")
-    app.config.from_mapping(
-        DATABASE=db_path,
-        SQLALCHEMY_DATABASE_URI="sqlite:////{}".format(db_path)
-    )
 
     if environment == "development" and app_config is None:
         from . import config
-        app_config = config.Dev()
+        app_config = config.Dev(app.instance_path)
         app.logger.warning("THIS APP IS IN DEBUG MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.")
 
     app.config.from_object(app_config) # Object base configuration
@@ -35,8 +30,13 @@ def create_app(app_config=None):
         pass
 
     # Prepare Database
-    from . import db
+    from .database import db, migrate
+    db.app = app
     db.init_app(app)
+    migrate.init_app(app, db=db)
+
+    from flask_label.database_cli import init_db_cli
+    init_db_cli(app)
 
     # Register Blueprints
     from . import auth

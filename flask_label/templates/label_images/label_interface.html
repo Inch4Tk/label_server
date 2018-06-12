@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block header %}
-  <h1>{% block title %}Label Interface{% endblock %}</h1>
+    <h1>{% block title %}Label Interface{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
@@ -10,9 +10,10 @@
     <a href="{{ url_for('label_images.next_task', batch_id=batch_id) }}">Next</a>
     <p>Link to image: {{ url_for('api.serve_image', img_id=img_task['id']) }}</p>
     <p>
-        <img src="{{ url_for('api.serve_image', img_id=img_task['id']) }}" alt="Image to Label"/>
+        <img src="{{ url_for('api.serve_image', img_id=img_task['id']) }}" alt="Image to Label" />
     </p>
     <a href="{{ url_for('label_images.label_batch_overview', batch_id=batch_id) }}">Back</a>
+    <div id="react_root" react-page="label_interface"></div>
 {% endblock %}
 
 <!-- <!DOCTYPE html>
