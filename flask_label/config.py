@@ -8,6 +8,8 @@ class Config(object):
     TESTING = False
     SECRET_KEY = "dev"
 
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     # Directories for labeling
     VALID_IMG_FILE_ENDINGS = ["png", "jpg", "jpeg"]
     VALID_LABEL_FILE_ENDINGS = ["xml"]

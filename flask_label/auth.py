@@ -6,7 +6,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import abort
 
-from flask_label.db import get_db
+from flask_label.database import db
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -47,7 +47,6 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        db = get_db()
         error = None
         user = db.execute(
             "SELECT * FROM user WHERE username = ?", (username,)
@@ -78,7 +77,7 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute(
+        g.user = db.execute(
             "SELECT * FROM user WHERE id = ?", (user_id,)
         ).fetchone()
 
@@ -95,6 +94,17 @@ def login_required(view):
     def wrapped_view(**kwargs):
         if g.user is None:
             return redirect(url_for("auth.login"))
+
+        return view(**kwargs)
+
+    return wrapped_view
+
+def api_login_required(view):
+    """Function wrapper for other views. Use with decorator."""
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return abort(401)
 
         return view(**kwargs)
 

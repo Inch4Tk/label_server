@@ -2,7 +2,7 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, url_for, current_app
 )
 from flask_label.auth import login_required
-from flask_label.db import get_db
+from flask_label.database import db
 
 bp = Blueprint("label_images", __name__,
                 url_prefix="/label_images", template_folder="templates/label_images/")
@@ -11,8 +11,6 @@ bp = Blueprint("label_images", __name__,
 @login_required
 def label_batch_overview(batch_id):
     """Give overview of the whole labeling batch. Allow to see and change settings."""
-    db = get_db()
-
     img_batch = db.execute(
         "SELECT b.id, b.dirname, "
         "COUNT(*) AS img_count, SUM(it.is_labeled) AS labeled_count "
@@ -36,8 +34,6 @@ def label_batch_overview(batch_id):
 @login_required
 def label_task(batch_id, task_id):
     """Present labeling interface."""
-    db = get_db()
-
     img_task = db.execute(
         "SELECT it.id, it.filename, it.is_labeled "
         "FROM image_task it "
@@ -51,8 +47,6 @@ def label_task(batch_id, task_id):
 @login_required
 def next_task(batch_id):
     """Get a random task from the database, that is not labeled"""
-    db = get_db()
-
     task_id = db.execute(
         "SELECT it.id "
         "FROM image_task it "

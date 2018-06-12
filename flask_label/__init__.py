@@ -35,7 +35,8 @@ def create_app(app_config=None):
         pass
 
     # Prepare Database
-    from . import db
+    from .database import db, migrate
+    db.app = app
     db.init_app(app)
 
     # Register Blueprints

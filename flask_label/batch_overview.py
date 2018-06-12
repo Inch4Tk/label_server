@@ -2,7 +2,7 @@ from flask import (
     Blueprint, current_app, g, redirect, render_template, request, session, url_for
 )
 from flask_label.auth import login_required
-from flask_label.db import get_db
+from flask_label.database import db
 
 bp = Blueprint("batch_overview", __name__)
 
@@ -11,8 +11,6 @@ bp = Blueprint("batch_overview", __name__)
 def index():
     """List all image and video directories and their stats.
     Allow people to choose one to continue labeling"""
-    db = get_db()
-
     img_batches = db.execute(
         "SELECT b.id, b.dirname, "
         "COUNT(*) AS img_count, SUM(it.is_labeled) AS labeled_count "
