@@ -7,7 +7,7 @@ import ReactDOM from 'react-dom';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import ExtremeClicking from "./ExtremeClicking.jsx";
-import { Navigation } from "./Navigation.jsx";
+import { TopBar } from "./TopBar.jsx";
 
 const NoMatch = () => (
     <h1>404: Could not find route</h1>
@@ -15,7 +15,7 @@ const NoMatch = () => (
 
 const App = () => (
     <div>
-        <Navigation />
+        <TopBar />
 
         <Switch>
             <Route exact path='/' render={()=>(<h1>Home</h1>)}/>
