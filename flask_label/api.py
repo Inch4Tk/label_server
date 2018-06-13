@@ -12,6 +12,14 @@ from flask_label.models import (
 bp = Blueprint("api", __name__,
                 url_prefix="/api")
 
+def batch_statistics(batch):
+    lc = 0
+    for task in batch["tasks"]:
+        if task["is_labeled"]:
+            lc += 1
+
+    return (len(batch["tasks"]), lc)
+
 @bp.route("/batches/")
 @api_login_required
 def batches():
@@ -24,16 +32,20 @@ def batches():
 
     # Add postprocessing info about statistics
     for batch in image_batch_data:
-        batch["img_count"] = len(batch["tasks"])
-        lc = 0
-        for task in batch["tasks"]:
-            if task["is_labeled"]:
-                lc += 1
-
-        batch["labeled_count"] = lc
+        batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
 
     return jsonify({"image_batches": image_batch_data, "video_batches": video_batch_data})
 
+@bp.route("/img_batch/<int:batch_id>")
+@api_login_required
+def img_batch(batch_id):
+    """Return data to a single image batch"""
+    img_batch = ImageBatch.query.filter_by(id=batch_id).options(db.joinedload('tasks')).first()
+
+    batch = image_batch_schema.dump(img_batch).data
+    batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
+
+    return jsonify(batch)
 
 @bp.route("/serve_image/<int:img_id>/")
 @api_login_required
