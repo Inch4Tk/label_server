@@ -42,9 +42,8 @@ class VideoBatchSchema(ma.ModelSchema):
     class Meta:
         model = VideoBatch
 
-
-
 user_schema = UserSchema()
+user_safe_schema = UserSchema(exclude=["password"])
 image_task_schema = ImageTaskSchema()
 image_batch_schema = ImageBatchSchema()
 video_batch_schema = VideoBatchSchema()
