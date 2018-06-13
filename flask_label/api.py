@@ -1,12 +1,13 @@
 import os
+import random
 
 from flask import (
-    Blueprint, redirect, current_app, send_from_directory, jsonify
+    Blueprint, redirect, current_app, send_from_directory, jsonify, request
 )
 from flask_label.auth import api_login_required
 from flask_label.database import db
 from flask_label.models import (
-    ImageTask, ImageBatch, VideoBatch, image_batch_schema, video_batch_schema
+    ImageTask, ImageBatch, VideoBatch, image_batch_schema, video_batch_schema, image_task_schema
 )
 
 bp = Blueprint("api", __name__,
@@ -46,6 +47,31 @@ def img_batch(batch_id):
     batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
 
     return jsonify(batch)
+
+@bp.route("/img_task/<int:task_id>")
+@api_login_required
+def image_task(task_id):
+    img_task = ImageTask.query.filter_by(id=task_id).first()
+
+    return image_task_schema.jsonify(img_task)
+
+@bp.route("/img_task/random/<int:batch_id>")
+@api_login_required
+def image_task_random(batch_id):
+    img_tasks = []
+    labeled = request.args.get("labeled")
+    if labeled == "true":
+        img_tasks = ImageTask.query.filter_by(batch_id=batch_id, is_labeled=True).all()
+    elif labeled == "false":
+        img_tasks = ImageTask.query.filter_by(batch_id=batch_id, is_labeled=False).all()
+    else:
+        img_tasks = ImageTask.query.filter_by(batch_id=batch_id).all()
+
+    if not img_tasks:
+        return jsonify(dict())
+
+    img_task = random.choice(img_tasks)
+    return image_task_schema.jsonify(img_task)
 
 @bp.route("/serve_image/<int:img_id>/")
 @api_login_required
