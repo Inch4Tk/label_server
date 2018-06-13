@@ -1,4 +1,4 @@
-from flask_label.database import db
+from flask_label.database import db, ma
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,3 +19,32 @@ class ImageBatch(db.Model):
 class VideoBatch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dirname = db.Column(db.Text, nullable=False)
+
+
+# ---------------------------------------------------------------------
+# SCHEMAS
+
+class UserSchema(ma.ModelSchema):
+    class Meta:
+        model = User
+
+class ImageTaskSchema(ma.ModelSchema):
+    batch = ma.Nested("ImageBatchSchema", exclude=("tasks"))
+    class Meta:
+        model = ImageTask
+
+class ImageBatchSchema(ma.ModelSchema):
+    tasks = ma.Nested("ImageTaskSchema", many=True, exclude=("batch", "batch_id"))
+    class Meta:
+        model = ImageBatch
+
+class VideoBatchSchema(ma.ModelSchema):
+    class Meta:
+        model = VideoBatch
+
+
+
+user_schema = UserSchema()
+image_task_schema = ImageTaskSchema()
+image_batch_schema = ImageBatchSchema()
+video_batch_schema = VideoBatchSchema()

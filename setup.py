@@ -10,6 +10,9 @@ setup(
         "flask==1.0.2",
         "flask-script",
         "flask-sqlalchemy",
-        "flask-migrate"
+        "flask-migrate",
+        "flask-marshmallow",
+        "flask-sqlalchemy",
+        "marshmallow-sqlalchemy"
     ],
 )
