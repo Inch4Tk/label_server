@@ -4,12 +4,31 @@ import "./../scss/app.scss"
 // JS Assets
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import ExtremeClicking from "./ExtremeClicking.jsx";
+import { Navigation } from "./Navigation.jsx";
 
+const NoMatch = () => (
+    <h1>404: Could not find route</h1>
+)
+
+const App = () => (
+    <div>
+        <Navigation />
+
+        <Switch>
+            <Route exact path='/' render={()=>(<h1>Home</h1>)}/>
+            <Route exact path='/test' render={() => (<h1>Test</h1>)} />
+            <Route component={NoMatch}/>
+        </Switch>
+    </div>
+)
 
 var doc_root = document.getElementById("react-root");
 ReactDOM.render(
-    <h1>placeholder</h1>,
-    doc_root
+    <Router>
+        <App />
+    </Router>
+    ,doc_root
 );
