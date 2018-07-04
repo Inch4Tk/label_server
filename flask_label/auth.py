@@ -6,7 +6,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import abort
 
-from flask_label.models import User
+from flask_label.models import User, user_safe_schema
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -59,7 +59,7 @@ def login():
             session.clear()
             session["user_id"] = user.id
             current_app.logger.info('%s logged in successfully', username)
-            return redirect(url_for("index"))
+            return redirect(url_for("index.index"))
         else:
             current_app.logger.info('%s failed to log in', username)
 
@@ -74,14 +74,16 @@ def load_logged_in_user():
 
     if user_id is None:
         g.user = None
+        g.user_json = None
     else:
         g.user = User.query.filter_by(id=user_id).first()
+        g.user_json = user_safe_schema.dump(g.user).data
 
 @bp.route("/logout")
 def logout():
     """Logout logic."""
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("auth.login"))
 
 
 def login_required(view):

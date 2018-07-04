@@ -30,10 +30,11 @@ def create_app(app_config=None):
         pass
 
     # Prepare Database
-    from .database import db, migrate
+    from .database import db, migrate, ma
     db.app = app
     db.init_app(app)
     migrate.init_app(app, db=db)
+    ma.init_app(app)
 
     from flask_label.database_cli import init_db_cli
     init_db_cli(app)
@@ -41,12 +42,15 @@ def create_app(app_config=None):
     # Register Blueprints
     from . import auth
     app.register_blueprint(auth.bp)
-    from . import batch_overview
-    app.register_blueprint(batch_overview.bp)
-    app.add_url_rule("/", endpoint="index")
-    from . import label_images
-    app.register_blueprint(label_images.bp)
     from . import api
     app.register_blueprint(api.bp)
+
+    from . import index
+    app.register_blueprint(index.bp)
+    app.add_url_rule("/", endpoint="index.index")
+
+    from . import label_images
+    app.register_blueprint(label_images.bp)
+
 
     return app
