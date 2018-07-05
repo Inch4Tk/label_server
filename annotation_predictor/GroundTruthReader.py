@@ -15,6 +15,7 @@ class GroundTruthReader:
         while not found:
             buffer = next(self.reader)
 
+            # it is assumed that entries in csv files are ordered by image_id which is true for the OpenImages dataset
             while buffer['ImageID'] == image_id:
                 found = True
                 ret.append(buffer)
