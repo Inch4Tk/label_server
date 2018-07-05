@@ -2,9 +2,13 @@ import csv
 
 class GroundTruthReader:
     def __init__(self, cvsfile: str):
-        self.reader = csv.DictReader(open(cvsfile))
+        self.file = open(cvsfile)
+        self.reader = csv.DictReader(self.file)
 
-    def get_ground_truth(self, image_id: str) -> list:
+    def __exit__(self):
+        self.file.close()
+
+    def get_ground_truth_annotation(self, image_id: str) -> list:
         ret = []
         found = False
 

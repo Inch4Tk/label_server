@@ -1,6 +1,7 @@
 import os
-import urllib.request as urllib
 import tarfile
+import urllib.request as urllib
+
 def download_od_model():
     model_name = 'ssdlite_mobilenet_v2_coco_2018_05_09'
     fname = '{}.tar.gz'.format(model_name)
@@ -16,7 +17,6 @@ def download_od_model():
         tar.close()
         os.remove(fname)
         os.rename(os.path.join(model_dir, 'saved_model'), os.path.join(model_dir, '1'))
-
 
 if __name__ == '__main__':
     download_od_model()

@@ -9,9 +9,7 @@ import tensorflow as tf
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-
 def rl_model(features, mode):
-
     # Input Layer:
     x = tf.reshape(features["x"], [-1, 606])
 
@@ -39,7 +37,6 @@ def rl_model(features, mode):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
         train_op = optimizer.minimize(loss=loss)
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
-
 
 if __name__ == '__main__':
     # TODO Load training data
