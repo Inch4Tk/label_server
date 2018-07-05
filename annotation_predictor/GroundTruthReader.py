@@ -1,12 +1,18 @@
 import csv
+import json
+from collections import OrderedDict
+
+from settings import class_id_file
 
 class GroundTruthReader:
     def __init__(self, cvsfile: str):
-        self.file = open(cvsfile)
-        self.reader = csv.DictReader(self.file)
+        self.gt_file = open(cvsfile)
+        self.reader = csv.DictReader(self.gt_file)
+        with open(class_id_file) as file:
+            self.classID_file = json.load(file)
 
     def __exit__(self):
-        self.file.close()
+        self.gt_file.close()
 
     def get_ground_truth_annotation(self, image_id: str) -> list:
         ret = []
@@ -21,3 +27,9 @@ class GroundTruthReader:
                 ret.append(buffer)
                 buffer = next(self.reader)
         return ret
+
+    def get_class_from_id(self, bounding_box: OrderedDict) -> str:
+        try:
+            return self.classID_file[bounding_box['LabelName']]
+        except KeyError as e:
+            raise KeyError('ImageID does not exist') from e
