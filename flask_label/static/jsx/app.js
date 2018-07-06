@@ -12,23 +12,50 @@ import { TopBar } from "./TopBar.jsx";
 const NoMatch = () => (
     <h1>404: Could not find route</h1>
 )
-//[{link: "/todo", name: "Instructions"}, {link: "/todo", name: "Settings"}]
+
+// All our routes
+const routes = [
+    {
+        path: "/",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
+        main: () => (<h1>Home</h1>)
+    },
+    {
+        path: "/todo",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "anotherdyntestlink" }],
+        main: () => (<h1>TODO</h1>)
+    }
+]
+
+// Initialize the app
 const App = () => (
     <div>
-        <TopBar />
+        <TopBar routes={routes}/>
 
         <Switch>
-            <Route exact path="/" render={() => (<h1>Home</h1>)} />
-            <Route exact path="/todo" render={() => (<h1>TODO</h1>)} />
+            {
+                // Add all routes to the main content switch
+                routes.map((route, index) => (
+                    <Route
+                        key={index}
+                        exact={route.exact}
+                        path={route.path}
+                        component={route.main}
+                    />
+                ))
+            }
             <Route component={NoMatch}/>
         </Switch>
     </div>
 )
 
+// Put the SPA to the document root
 var doc_root = document.getElementById("react-root");
 ReactDOM.render(
     <Router>
         <App />
-    </Router>
-    ,doc_root
+    </Router>,
+    doc_root
 );
