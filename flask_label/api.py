@@ -16,7 +16,7 @@ bp = Blueprint("api", __name__,
 def batch_statistics(batch):
     lc = 0
     for task in batch["tasks"]:
-        if task["is_labeled"]:
+        if task["isLabeled"]:
             lc += 1
 
     return (len(batch["tasks"]), lc)
@@ -33,9 +33,9 @@ def batches():
 
     # Add postprocessing info about statistics
     for batch in image_batch_data:
-        batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
+        batch["imgCount"], batch["labeledCount"] = batch_statistics(batch)
 
-    return jsonify({"image_batches": image_batch_data, "video_batches": video_batch_data})
+    return jsonify({"imageBatches": image_batch_data, "videoBatches": video_batch_data})
 
 @bp.route("/img_batch/<int:batch_id>")
 @api_login_required
@@ -44,7 +44,7 @@ def img_batch(batch_id):
     img_batch = ImageBatch.query.filter_by(id=batch_id).options(db.joinedload('tasks')).first()
 
     batch = image_batch_schema.dump(img_batch).data
-    batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
+    batch["imgCount"], batch["labeledCount"] = batch_statistics(batch)
 
     return jsonify(batch)
 
