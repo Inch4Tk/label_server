@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom"
 
 // Components
 import { TopBar } from "./components/TopBar.jsx";
-import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
+import { NoMatch } from "./components/NoMatch.jsx";
 
 // Containers
 
@@ -37,10 +37,6 @@ const routes = [
         main: () => (<h1>TODO</h1>)
     }
 ]
-
-const NoMatch = () => (
-    <h1>404: Could not find route</h1>
-)
 
 // Initialize the app
 const App = () => (
