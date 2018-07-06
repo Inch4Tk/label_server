@@ -6,8 +6,9 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom"
 
-import ExtremeClicking from "./ExtremeClicking.jsx";
-import { TopBar } from "./TopBar.jsx";
+import ExtremeClicking from "./presentational/ExtremeClicking.jsx";
+import { TopBar } from "./presentational/TopBar.jsx";
+import { BatchOverview } from "./presentational/BatchOverview.jsx";
 
 const NoMatch = () => (
     <h1>404: Could not find route</h1>
@@ -19,7 +20,7 @@ const routes = [
         path: "/",
         exact: true,
         navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
-        main: () => (<h1>Home</h1>)
+        main: BatchOverview
     },
     {
         path: "/todo",
