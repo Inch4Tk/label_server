@@ -7,14 +7,14 @@ import ReactDOM from "react-dom";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom"
 
 // Components
-import ExtremeClicking from "./components/ExtremeClicking.jsx";
 import { TopBar } from "./components/TopBar.jsx";
-import { BatchOverview } from "./components/BatchOverview.jsx";
+import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
 
 // Containers
 
 // Redux
-import { createStore } from 'redux'
+import { Provider } from 'react-redux'
+import { createStore } from "redux"
 import rootReducer from "./reducers";
 const store = createStore(rootReducer)
 
@@ -24,7 +24,7 @@ const routes = [
         path: "/",
         exact: true,
         navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
-        main: () => (<BatchOverview />)
+        main: () => (<BatchOverviewApp />)
     },
     {
         path: "/todo",
