@@ -10,6 +10,7 @@ const mapDispatchToProps = dispatch => ({
     //toggleTodo: id => dispatch(toggleTodo(id))
 })
 
+// Tie state and visualization together
 export default connect(
     mapStateToProps,
     mapDispatchToProps

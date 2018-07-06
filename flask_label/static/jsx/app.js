@@ -13,10 +13,14 @@ import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
 // Containers
 
 // Redux
+import thunkMiddleware from 'redux-thunk'
 import { Provider } from 'react-redux'
-import { createStore } from "redux"
+import { createStore, applyMiddleware } from "redux"
 import rootReducer from "./reducers";
-const store = createStore(rootReducer)
+import { fetchBatches } from "./actions";
+
+const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
+store.dispatch(fetchBatches());
 
 // All our routes
 const routes = [

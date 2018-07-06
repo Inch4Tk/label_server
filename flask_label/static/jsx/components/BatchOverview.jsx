@@ -3,13 +3,13 @@ import { Link } from "react-router-dom"
 
 const ImageBatch = ({ batch }) => (
     <li>
-        batch.id
+        {batch.id}: {batch.dirname}
     </li>
 )
 
 const VideoBatch = ({ batch }) => (
     <li>
-        batch.id
+        {batch.id}: {batch.dirname}
     </li>
 )
 

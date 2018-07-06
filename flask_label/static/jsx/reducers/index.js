@@ -13,7 +13,7 @@ const dummy_state = {
                     {
                         id: 46456,
                         filename: "qwerewr",
-                        isLabeled: true,
+                        is_labeled: true,
                     }
                 ],
                 imgCount: 1234,
