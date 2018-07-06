@@ -7,7 +7,6 @@ const batches = (state = { isFetching: true, imageBatches: [], videoBatches: [] 
                 isFetching: true,
             })
         case RECEIVE_BATCHES:
-            console.log(action)
             return Object.assign({}, state, {
                 isFetching: false,
                 imageBatches: action.data.imageBatches,

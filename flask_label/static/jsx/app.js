@@ -4,13 +4,15 @@ import "./../scss/app.scss"
 // JS Assets
 import React from "react";
 import ReactDOM from "react-dom";
-import { BrowserRouter as Router, Route, Switch } from "react-router-dom"
+import { BrowserRouter as Router, Route, Switch, Redirect } from "react-router-dom"
 
 // Components
 import { TopBar } from "./components/TopBar.jsx";
 import { NoMatch } from "./components/NoMatch.jsx";
 
 // Containers
+import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
+import ImageBatchDetailApp from "./containers/ImageBatchDetailApp.jsx";
 
 // Redux
 import thunkMiddleware from 'redux-thunk'
@@ -29,6 +31,18 @@ const routes = [
         exact: true,
         navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
         main: () => (<BatchOverviewApp />)
+    },
+    {
+        path: "/image_batch",
+        exact: true,
+        navDynamic: [],
+        main: () => (<Redirect to="/" />)
+    },
+    {
+        path: "/image_batch/:batch_id",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "settings" }, { link: "/todo", name: "instructions" }],
+        main: (props) => (<ImageBatchDetailApp {...props}/>)
     },
     {
         path: "/todo",

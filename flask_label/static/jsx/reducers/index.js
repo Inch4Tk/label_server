@@ -2,7 +2,7 @@ import { combineReducers } from "redux"
 import batches from "./batches"
 
 // HOW STATE TREE LOOKS LIKE
-const dummy_state = {
+const example_state = {
     batches: {
         isFetching: true,
         imageBatches: [
@@ -27,10 +27,10 @@ const dummy_state = {
             }
         ]
     },
-    user: {
-        id: 1234,
-        username: "horst"
-    }
+    // user: {
+    //     id: 1234,
+    //     username: "horst"
+    // } // TODO add this user
 }
 
 
