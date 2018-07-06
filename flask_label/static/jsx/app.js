@@ -6,13 +6,17 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom"
 
-import ExtremeClicking from "./presentational/ExtremeClicking.jsx";
-import { TopBar } from "./presentational/TopBar.jsx";
-import { BatchOverview } from "./presentational/BatchOverview.jsx";
+// Components
+import ExtremeClicking from "./components/ExtremeClicking.jsx";
+import { TopBar } from "./components/TopBar.jsx";
+import { BatchOverview } from "./components/BatchOverview.jsx";
 
-const NoMatch = () => (
-    <h1>404: Could not find route</h1>
-)
+// Containers
+
+// Redux
+import { createStore } from 'redux'
+import rootReducer from "./reducers";
+const store = createStore(rootReducer)
 
 // All our routes
 const routes = [
@@ -20,7 +24,7 @@ const routes = [
         path: "/",
         exact: true,
         navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
-        main: BatchOverview
+        main: () => (<BatchOverview />)
     },
     {
         path: "/todo",
@@ -30,11 +34,14 @@ const routes = [
     }
 ]
 
+const NoMatch = () => (
+    <h1>404: Could not find route</h1>
+)
+
 // Initialize the app
 const App = () => (
     <div>
         <TopBar routes={routes}/>
-
         <Switch>
             {
                 // Add all routes to the main content switch
@@ -55,8 +62,10 @@ const App = () => (
 // Put the SPA to the document root
 var doc_root = document.getElementById("react-root");
 ReactDOM.render(
-    <Router>
-        <App />
-    </Router>,
+    <Provider store={store}>
+        <Router>
+            <App />
+        </Router>
+    </Provider>,
     doc_root
 );
