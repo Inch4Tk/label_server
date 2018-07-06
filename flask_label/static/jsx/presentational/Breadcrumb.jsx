@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, Route } from "react-router-dom"
 
-const Breadcrumb = (props) => (
+const Breadcrumb = ({ match }) => (
     <div className="breadcrumb">
         {
             // This is a recursive definition of breadcrumbs
@@ -10,8 +10,8 @@ const Breadcrumb = (props) => (
             // So we build a link to the current recursion level, then add a route
             // that will render the next navigation level
         }
-        <Link to={props.match.url}>{props.match.params.name}</Link>
-        <Route path={props.match.url + "/:name"} component={Breadcrumb} />
+        <Link to={match.url}>{match.params.name}</Link>
+        <Route path={match.url + "/:name"} component={Breadcrumb} />
     </div>
 )
 

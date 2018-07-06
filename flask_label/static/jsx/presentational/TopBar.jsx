@@ -22,19 +22,19 @@ const BreadcrumbNav = () => (
     </nav>
 )
 
-const DynamicNav = (props) => (
+const DynamicNav = ({ entries }) => (
     <nav className="nav-dynamic">
-        {props.entries.map((dyn, index) => (<Link to={dyn.link} key={index}>{dyn.name}</Link>))}
+        {entries.map((dyn, index) => (<Link to={dyn.link} key={index}>{dyn.name}</Link>))}
     </nav>
 )
 
-const Navigation = (props) => (
+const Navigation = ({ routes }) => (
     <div className="navigation">
         <BreadcrumbNav />
         <Switch>
             {
                 // Add all context-aware, dynamic route options
-                props.routes.map((route, index) => (
+                routes.map((route, index) => (
                     <Route
                         key={index}
                         exact={route.exact}
@@ -47,10 +47,10 @@ const Navigation = (props) => (
     </div>
 )
 
-const TopBar = (props) => (
+const TopBar = ({ routes }) => (
     <div className="top-bar">
         <Logo />
-        <Navigation routes={props.routes} />
+        <Navigation routes={routes} />
         <UserInfo />
     </div>
 )
