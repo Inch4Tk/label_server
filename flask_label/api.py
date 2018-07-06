@@ -16,7 +16,7 @@ bp = Blueprint("api", __name__,
 def batch_statistics(batch):
     lc = 0
     for task in batch["tasks"]:
-        if task["isLabeled"]:
+        if task["is_labeled"]:
             lc += 1
 
     return (len(batch["tasks"]), lc)
@@ -29,7 +29,7 @@ def batches():
     video_batches = VideoBatch.query.all()
 
     image_batch_data = image_batch_schema.dump(img_batches, many=True).data
-    video_batch_data = video_batch_schema.dump(img_batches, many=True).data
+    video_batch_data = video_batch_schema.dump(video_batches, many=True).data
 
     # Add postprocessing info about statistics
     for batch in image_batch_data:
