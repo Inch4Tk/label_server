@@ -8,4 +8,5 @@ dependencies:
     - pytest
     - coverage
     - python-dotenv
+    - Pillow
     - -e .
