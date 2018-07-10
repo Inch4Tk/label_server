@@ -1,6 +1,8 @@
-def compute_iou(detA, detB):
-    bbA = [float(detA['XMin']), float(detA['YMin']), float(detA['XMax']), float(detA['YMax'])]
-    bbB = [float(detB['XMin']), float(detB['YMin']), float(detB['XMax']), float(detB['YMax'])]
+from collections import OrderedDict
+
+def compute_iou(det_a: OrderedDict, det_b: OrderedDict) -> float:
+    bbA = [float(det_a['XMin']), float(det_a['YMin']), float(det_a['XMax']), float(det_a['YMax'])]
+    bbB = [float(det_b['XMin']), float(det_b['YMin']), float(det_b['XMax']), float(det_b['YMax'])]
 
     x_min = max(bbA[0], bbB[0])
     y_min = max(bbA[1], bbB[1])

@@ -13,7 +13,7 @@ class GroundTruthReader:
     def __exit__(self, exception_type, exception_value, traceback):
         self.gt_file.close()
 
-    def parse_to_dict(self):
+    def parse_to_dict(self) -> dict:
         result = {}
         for entry in self.reader:
             key = entry['ImageID']
