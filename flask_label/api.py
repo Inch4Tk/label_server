@@ -29,13 +29,13 @@ def batches():
     video_batches = VideoBatch.query.all()
 
     image_batch_data = image_batch_schema.dump(img_batches, many=True).data
-    video_batch_data = video_batch_schema.dump(img_batches, many=True).data
+    video_batch_data = video_batch_schema.dump(video_batches, many=True).data
 
     # Add postprocessing info about statistics
     for batch in image_batch_data:
-        batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
+        batch["imgCount"], batch["labeledCount"] = batch_statistics(batch)
 
-    return jsonify({"image_batches": image_batch_data, "video_batches": video_batch_data})
+    return jsonify({"imageBatches": image_batch_data, "videoBatches": video_batch_data})
 
 @bp.route("/img_batch/<int:batch_id>")
 @api_login_required
@@ -44,7 +44,7 @@ def img_batch(batch_id):
     img_batch = ImageBatch.query.filter_by(id=batch_id).options(db.joinedload('tasks')).first()
 
     batch = image_batch_schema.dump(img_batch).data
-    batch["img_count"], batch["labeled_count"] = batch_statistics(batch)
+    batch["imgCount"], batch["labeledCount"] = batch_statistics(batch)
 
     return jsonify(batch)
 

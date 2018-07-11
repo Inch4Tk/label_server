@@ -2,33 +2,84 @@
 import "./../scss/app.scss"
 
 // JS Assets
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
+import React from "react";
+import ReactDOM from "react-dom";
+import { BrowserRouter as Router, Route, Switch, Redirect } from "react-router-dom"
 
-import ExtremeClicking from "./ExtremeClicking.jsx";
-import { TopBar } from "./TopBar.jsx";
+// Components
+import { TopBar } from "./components/TopBar.jsx";
+import { NoMatch } from "./components/NoMatch.jsx";
 
-const NoMatch = () => (
-    <h1>404: Could not find route</h1>
-)
+// Containers
+import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
+import ImageBatchDetailApp from "./containers/ImageBatchDetailApp.jsx";
 
+// Redux
+import thunkMiddleware from 'redux-thunk'
+import { Provider } from 'react-redux'
+import { createStore, applyMiddleware } from "redux"
+import rootReducer from "./reducers";
+import { fetchBatches } from "./actions";
+
+const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
+store.dispatch(fetchBatches());
+
+// All our routes
+const routes = [
+    {
+        path: "/",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "testlink" }], // These are context aware links in navbar
+        main: () => (<BatchOverviewApp />)
+    },
+    {
+        path: "/image_batch",
+        exact: true,
+        navDynamic: [],
+        main: () => (<Redirect to="/" />)
+    },
+    {
+        path: "/image_batch/:batch_id",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "settings" }, { link: "/todo", name: "instructions" }],
+        main: (props) => (<ImageBatchDetailApp {...props}/>)
+    },
+    {
+        path: "/todo",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "anotherdyntestlink" }],
+        main: () => (<h1>TODO</h1>)
+    }
+]
+
+// Initialize the app
 const App = () => (
     <div>
-        <TopBar />
-
+        <TopBar routes={routes}/>
         <Switch>
-            <Route exact path='/' render={()=>(<h1>Home</h1>)}/>
-            <Route exact path='/test' render={() => (<h1>Test</h1>)} />
+            {
+                // Add all routes to the main content switch
+                routes.map((route, index) => (
+                    <Route
+                        key={index}
+                        exact={route.exact}
+                        path={route.path}
+                        component={route.main}
+                    />
+                ))
+            }
             <Route component={NoMatch}/>
         </Switch>
     </div>
 )
 
+// Put the SPA to the document root
 var doc_root = document.getElementById("react-root");
 ReactDOM.render(
-    <Router>
-        <App />
-    </Router>
-    ,doc_root
+    <Provider store={store}>
+        <Router>
+            <App />
+        </Router>
+    </Provider>,
+    doc_root
 );
