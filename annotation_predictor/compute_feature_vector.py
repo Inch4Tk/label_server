@@ -12,9 +12,11 @@ def compute_feature_vector(annotation: list, position: int) -> list:
     avg_dif = score - avg
     max_dif = score - get_max_score(annotation)
     class_index = ClassReader().get_index_of_class(detection['LabelName'])
-    one_hot_encoding = np.zeros(601)
+    one_hot_encoding = np.zeros(len(ClassReader().class_ids))
     one_hot_encoding[class_index] = 1
-    return [score, rel_size, avg, avg_dif, max_dif, one_hot_encoding]
+    feature_vector = [score, rel_size, avg, avg_dif, max_dif]
+    feature_vector.extend(one_hot_encoding)
+    return feature_vector
 
 def get_rel_size(detection: OrderedDict) -> float:
     return round((float(detection['XMax']) - float(detection['XMin'])) * (

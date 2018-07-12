@@ -10,7 +10,8 @@ def test_compute_feature_vector():
     assert feature_vector[2] == 0.3
     assert feature_vector[3] == 0.2
     assert feature_vector[4] == 0
-#
-    one_hot_enc = np.zeros(601)
-    one_hot_enc[459] = 1
-    assert (feature_vector[5] == one_hot_enc).all
+    expected = [0.5, 0.01, 0.3, 0.2, 0]
+    expected_one_hot_enc = np.zeros(601)
+    expected_one_hot_enc[459] = 1
+    expected.extend(expected_one_hot_enc)
+    assert feature_vector == expected
