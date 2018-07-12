@@ -12,7 +12,16 @@ def load_image(path_to_image: str):
     img = Image.open(path_to_image)
     img.load()
     data = np.asarray(img, dtype='uint8')
+
+    # greyscale
+    if len(data.shape) == 2:
+        rgbimg = Image.new("RGB", img.size)
+        rgbimg.paste(img)
+        img = rgbimg
+        data = np.asarray(img, dtype='uint8')
+
     data = np.expand_dims(data, 0)
+
     return data
 
 def send_od_request(path_to_image: str):
