@@ -8,6 +8,9 @@ from grpc.beta import implementations
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
+from annotation_predictor.ClassReader import ClassReader
+from settings import class_ids_coco_file
+
 def load_image(path_to_image: str):
     img = Image.open(path_to_image).convert('RGB')
     img.load()
@@ -40,13 +43,14 @@ def send_od_request(path_to_image: str):
 
     result = {image_id: []}
 
+    class_reader = ClassReader(class_ids_coco_file)
     for i, cls in enumerate(classes):
         confidence = scores[i]
 
         if confidence == 0.0:
             break
 
-        label_name = cls
+        label_name = class_reader.get_class_from_id(cls)
         ymin = bounding_boxes[4 * i]
         xmin = bounding_boxes[4 * 1 + 1]
         ymax = bounding_boxes[4 * 1 + 2]

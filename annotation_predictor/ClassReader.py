@@ -1,10 +1,8 @@
 import json
 from collections import OrderedDict
 
-from settings import class_id_file
-
 class ClassReader:
-    def __init__(self):
+    def __init__(self, class_id_file):
         with open(class_id_file) as file:
             self.class_ids = json.load(file)
 
