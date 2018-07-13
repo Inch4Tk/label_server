@@ -9,5 +9,4 @@ dependencies:
     - coverage
     - python-dotenv
     - Pillow
-    - tensorflow
     - -e .
