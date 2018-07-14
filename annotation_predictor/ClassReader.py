@@ -1,14 +1,13 @@
 import json
-from collections import OrderedDict
 
 class ClassReader:
     def __init__(self, class_id_file):
         with open(class_id_file) as file:
             self.class_ids = json.load(file)
 
-    def get_class_from_id(self, bounding_box: OrderedDict) -> str:
+    def get_class_from_id(self, id: str) -> str:
         try:
-            return self.class_ids[bounding_box['LabelName']]
+            return self.class_ids[id]
         except KeyError as e:
             raise KeyError('ImageID does not exist') from e
 

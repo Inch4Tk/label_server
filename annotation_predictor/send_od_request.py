@@ -50,7 +50,7 @@ def send_od_request(path_to_image: str):
         if confidence == 0.0:
             break
 
-        label_name = class_reader.get_class_from_id(cls)
+        label_name = class_reader.get_class_from_id(str(cls))
         ymin = bounding_boxes[4 * i]
         xmin = bounding_boxes[4 * 1 + 1]
         ymax = bounding_boxes[4 * 1 + 2]
