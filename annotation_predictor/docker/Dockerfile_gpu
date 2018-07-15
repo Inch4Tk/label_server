@@ -1,0 +1,83 @@
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+
+ENV TF_CUDA_VERSION=9.0 \
+	TF_CUDNN_VERSION=7 \
+	TF_SERVING_COMMIT=tags/1.6.0 \
+	BAZEL_VERSION=0.11.1
+
+RUN apt-get update && apt-get install -y \
+		build-essential \
+		curl \
+		git \
+		libfreetype6-dev \
+		libpng12-dev \
+		libzmq3-dev \
+		mlocate \
+		pkg-config \
+		python-dev \
+		python-numpy \
+		python-pip \
+		software-properties-common \
+		swig \
+		zip \
+		zlib1g-dev \
+		libcurl3-dev \
+		openjdk-8-jdk\
+		openjdk-8-jre-headless \
+		wget \
+		&& \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
+
+RUN pip install mock grpcio
+
+RUN echo "startup --batch" >>/root/.bazelrc
+RUN echo "build --spawn_strategy=standalone --genrule_strategy=standalone" >>/root/.bazelrc
+ENV BAZELRC /root/.bazelrc
+
+WORKDIR /bazel
+RUN curl -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+	chmod +x bazel-*.sh && \
+	./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+WORKDIR /
+RUN mkdir /usr/lib/x86_64-linux-gnu/include/ && \
+	ln -s /usr/lib/x86_64-linux-gnu/include/cudnn.h /usr/lib/x86_64-linux-gnu/include/cudnn.h && \
+	ln -s /usr/include/cudnn.h /usr/local/cuda/include/cudnn.h && \
+	ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so /usr/local/cuda/lib64/libcudnn.so && \
+	ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.$TF_CUDNN_VERSION /usr/local/cuda/lib64/libcudnn.so.$TF_CUDNN_VERSION
+
+ENV TF_NEED_CUDA=1 \
+	TF_CUDA_COMPUTE_CAPABILITIES="3.0,3.5,5.2,6.0,6.1" \
+	LD_LIBRARY_PATH=/usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
+WORKDIR /tensorflow
+RUN git clone --recurse-submodules https://github.com/tensorflow/serving
+WORKDIR /tensorflow/serving
+RUN git checkout $TF_SERVING_COMMIT
+
+WORKDIR /tensorflow/serving
+RUN bazel build -c opt --copt=-mavx --copt=-mavx2 --copt=-mfma --copt=-mfpmath=both --copt=-msse4.2 --config=cuda -k --verbose_failures --crosstool_top=@local_config_cuda//crosstool:toolchain tensorflow_serving/model_servers:tensorflow_model_server
+
+RUN cp bazel-bin/tensorflow_serving/model_servers/tensorflow_model_server /usr/local/bin/ && \
+	bazel clean --expunge
+
+# gRPC
+EXPOSE 9000
+
+# REST
+EXPOSE 9001
+
+ENV FULL_MODEL_NAME=ssdlite_mobilenet_v2_coco_2018_05_09
+ENV MODEL_BASE_PATH=/model
+RUN mkdir -p ${MODEL_BASE_PATH}
+
+WORKDIR /model
+RUN curl -LO http://download.tensorflow.org/models/object_detection/${FULL_MODEL_NAME}.tar.gz && \
+    tar -xvzf ${FULL_MODEL_NAME}.tar.gz && \
+    rm -rf ${FULL_MODEL_NAME}.tar.gz && \
+    cd ${FULL_MODEL_NAME} && \
+    mv saved_model 1
+
+ENV MODEL_NAME=mobile_v2
+ENTRYPOINT tensorflow_model_server --port=9000 --rest_api_port=9001 --model_name=${MODEL_NAME} --model_base_path=${MODEL_BASE_PATH}/${FULL_MODEL_NAME}
