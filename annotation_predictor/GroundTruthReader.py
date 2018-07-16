@@ -25,4 +25,6 @@ class GroundTruthReader:
         return result
 
     def get_ground_truth_annotation(self, image_id: str) -> list:
-        return self.gt_dict[image_id]
+        if image_id in self.gt_dict:
+            return self.gt_dict[image_id]
+        return []
