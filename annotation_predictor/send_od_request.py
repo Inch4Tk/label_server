@@ -33,7 +33,6 @@ def send_od_request(path_to_image: str):
     request.inputs['inputs'].CopyFrom(tf.make_tensor_proto(img, dtype=tf.uint8))
 
     pred_result = stub.Predict(request, 60.0)
-
     bounding_boxes = pred_result.outputs['detection_boxes'].float_val
     classes = pred_result.outputs['detection_classes'].float_val
     scores = pred_result.outputs['detection_scores'].float_val
@@ -52,9 +51,9 @@ def send_od_request(path_to_image: str):
 
         label_name = class_reader.get_class_from_id(str(cls))
         ymin = bounding_boxes[4 * i]
-        xmin = bounding_boxes[4 * 1 + 1]
-        ymax = bounding_boxes[4 * 1 + 2]
-        xmax = bounding_boxes[4 * 1 + 3]
+        xmin = bounding_boxes[4 * i + 1]
+        ymax = bounding_boxes[4 * i + 2]
+        xmax = bounding_boxes[4 * i + 3]
         result[image_id].append({'LabelName': label_name, 'Confidence': confidence,
                                  'XMin': xmin, 'YMin': ymin, 'XMax': xmax, 'YMax': ymax})
 
