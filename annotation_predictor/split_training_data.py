@@ -25,8 +25,10 @@ def split_training_data(data_path: str, ratio: float):
         json.dump(data, f)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Split a detection record in training and test data')
-    parser.add_argument('path_to_detections', type=str, metavar='path_to_detections', help='path to detection data')
+    parser = argparse.ArgumentParser(
+        description='Split a detection record in training and test data')
+    parser.add_argument('path_to_detections', type=str, metavar='path_to_detections',
+                        help='path to detection data')
     parser.add_argument('--ratio', type=float, help='ratio of test vs. training data', default=0.2)
     args = parser.parse_args()
 

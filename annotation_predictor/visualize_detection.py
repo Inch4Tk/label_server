@@ -23,7 +23,8 @@ def visualize_detection(path_to_image: str, detection: list):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a proposal network for labeling tasks')
     parser.add_argument('path_to_image', type=str, metavar='path_to_image', help='path to image')
-    parser.add_argument('path_to_detection', type=str, metavar='path_to_detection', help='path to detection data')
+    parser.add_argument('path_to_detection', type=str, metavar='path_to_detection',
+                        help='path to detection data')
 
     args = parser.parse_args()
     with open(args.path_to_detection) as f:
