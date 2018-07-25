@@ -28,12 +28,13 @@ def create_detection_record(path_to_images: str, path_to_json=None):
 
     for i, image in enumerate(images):
         if (i % 100) == 0:
+            with open(path_to_json, 'r+') as f:
+                json.dump(result, f)
             print('Evaluated {} of {} images'.format(i, total_images))
-        path_to_image = os.path.join(path_to_images, image)
 
+        path_to_image = os.path.join(path_to_images, image)
         result.update(send_od_request(path_to_image))
-        with open(path_to_json, 'r+') as f:
-            json.dump(result, f)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
