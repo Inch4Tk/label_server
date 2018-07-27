@@ -11,3 +11,4 @@ class_ids_coco_file = os.path.join(annotation_predictor_metadata_dir, 'class_ids
 
 verification_time = 1.8  # time for verifying one annotation
 annotation_time = 7  # time for annotating one object via extreme clicking
+alpha = 0.5  # minimum IoU for detection to be accepted as correct
