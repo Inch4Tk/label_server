@@ -1,4 +1,4 @@
-from annotation_predictor.GroundTruthReader import GroundTruthReader
+from annotation_predictor.groundtruth_reader import GroundTruthReader
 from annotation_predictor.test.conftest import test_data, test_file, test_dict
 
 def test_get_groundtruth_annotation_finds_annotation_for_image():

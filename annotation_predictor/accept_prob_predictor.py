@@ -7,10 +7,8 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from annotation_predictor.GroundTruthReader import GroundTruthReader
-from annotation_predictor.util import compute_feature_vector, evaluate_prediction_record, \
-    compute_label
-from settings import model_dir
+from annotation_predictor.util import compute_feature_vector, evaluate_prediction_record
+from annotation_predictor.settings import model_dir
 
 tf.logging.set_verbosity(tf.logging.INFO)
 

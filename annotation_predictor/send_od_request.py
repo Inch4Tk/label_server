@@ -8,8 +8,8 @@ from grpc.beta import implementations
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
-from annotation_predictor.ClassReader import ClassReader
-from settings import class_ids_coco_file
+from annotation_predictor.class_reader import ClassReader
+from annotation_predictor.settings import class_ids_coco_file
 
 def load_image(path_to_image: str):
     img = Image.open(path_to_image).convert('RGB')

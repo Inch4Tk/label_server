@@ -1,9 +1,9 @@
 import csv
 
 class GroundTruthReader:
-    def __init__(self, cvsfile: str):
-        self.cvsfile = cvsfile
-        self.gt_file = open(self.cvsfile)
+    def __init__(self, csvfile: str):
+        self.csvfile = csvfile
+        self.gt_file = open(self.csvfile)
         self.reader = csv.DictReader(self.gt_file)
         self.gt_dict = self.parse_to_dict()
 

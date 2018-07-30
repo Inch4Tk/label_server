@@ -2,8 +2,8 @@ from collections.__init__ import OrderedDict
 
 import numpy as np
 
-from annotation_predictor.ClassReader import ClassReader
-from settings import class_ids_oid_file
+from annotation_predictor.class_reader import ClassReader
+from annotation_predictor.settings import class_ids_oid_file
 
 def compute_feature_vector(annotation: list, position: int) -> list:
     class_reader = ClassReader(class_ids_oid_file)

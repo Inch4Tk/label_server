@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime
 
-from settings import annotation_predictor_metadata_dir
+from annotation_predictor.settings import annotation_predictor_metadata_dir
 
 def concat_detection_record(record1: str, record2: str):
     timestamp = datetime.now().strftime('%Y_%m_%d_%H%M%S')
