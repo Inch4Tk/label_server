@@ -7,17 +7,18 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from annotation_predictor.util import compute_feature_vector, evaluate_prediction_record
 from annotation_predictor.settings import model_dir
+from annotation_predictor.util import compute_feature_vector, evaluate_prediction_record
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 FLAGS = None
 
 def prob_model(x):
+    """ Defines the structure and computations of the neural network."""
     dense1 = tf.layers.dense(
         inputs=x,
-        units=10,
+        units=50,
         activation=tf.nn.relu
     )
     dense2 = tf.layers.dense(
@@ -27,12 +28,12 @@ def prob_model(x):
     )
     dense3 = tf.layers.dense(
         inputs=dense2,
-        units=50,
+        units=20,
         activation=tf.nn.relu
     )
     dense4 = tf.layers.dense(
         inputs=dense3,
-        units=25,
+        units=15,
         activation=tf.nn.relu
     )
     dense5 = tf.layers.dense(
@@ -48,63 +49,46 @@ def prob_model(x):
 
     return y
 
-def main(_):
+def main(mode: str, detections=None):
+    """
+    Trains a new model or uses an existent model to make predictions.
+
+    Args:
+        mode: Defines whether a new model should be trained
+        or an existent model should be used for making predictions.
+        detections: Used in detection-mode to give a list of detections
+        for which predictions should be generated.
+    """
     x = tf.placeholder(tf.float32, [None, 606])
     y = prob_model(x)
 
     saver = tf.train.Saver()
 
-    feature_data = []
-
-    with open(FLAGS.path_to_data) as file:
-        detections = json.load(file)
-
-    if FLAGS.mode == 'train':
+    if FLAGS and FLAGS.mode == 'train':
         label = tf.placeholder(tf.float32, [None, 1])
 
         batch_size = FLAGS.batch_size
-        gt_reader = GroundTruthReader(FLAGS.path_to_gt)
+        base = FLAGS.path_to_training_data
+        path_to_feature_data_train = '{}_{}'.format(base, 'features_train.txt')
+        path_to_label_data_train = '{}_{}'.format(base, 'labels_train.txt')
+        path_to_feature_data_test = '{}_{}'.format(base, 'features_test.txt')
+        path_to_label_data_test = '{}_{}'.format(base, 'labels_test.txt')
 
-        label_data = []
-        feature_data_ones = []
+        with open(path_to_feature_data_train, 'r') as f:
+            feature_data_train = json.load(f)
+        with open(path_to_label_data_train, 'r') as f:
+            label_data_train = json.load(f)
+        with open(path_to_feature_data_test, 'r') as f:
+            feature_data_test = json.load(f)
+        with open(path_to_label_data_test, 'r') as f:
+            label_data_test = json.load(f)
 
-        for key in detections:
-            gt = gt_reader.get_ground_truth_annotation(key)
-            for i, _ in enumerate(detections[key]):
-                feat = compute_feature_vector(detections[key], i)
-                lab = compute_label(detections[key][i], gt, FLAGS.alpha)
-                feature_data.append(feat)
-                label_data.append(lab)
-                if lab == 1:
-                    feature_data_ones.append(feat)
-
-        zero_offset = label_data.count(0) - label_data.count(1)
-        while zero_offset > 0:
-            for f in feature_data_ones:
-                if zero_offset == 0:
-                    break
-                feature_data.append(f)
-                label_data.append(1.0)
-                zero_offset -= 1
-
-        dataset = list(zip(feature_data, label_data))
+        dataset = list(zip(feature_data_train, label_data_train))
         random.shuffle(dataset)
         feature_data, label_data = zip(*dataset)
 
-        with open(FLAGS.path_to_test_data) as file:
-            test_data = json.load(file)
-
-        test_x = []
-        test_label = []
-
-        for key in test_data:
-            gt = gt_reader.get_ground_truth_annotation(key)
-            for i, _ in enumerate(test_data[key]):
-                test_x.append(compute_feature_vector(test_data[key], i))
-                test_label.append(compute_label(test_data[key][i], gt, FLAGS.alpha))
-
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=label))
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.03)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
 
         correct_prediction = tf.equal(tf.round(y), label)
@@ -125,13 +109,15 @@ def main(_):
                                         label: np.reshape(label_data[a:b], (-1, 1))})
 
             evaluate_prediction_record(y.eval(feed_dict={
-                x: np.reshape(test_x, (-1, 606)), label: np.reshape(test_label, (-1, 1))}).reshape(
-                -1),
-                test_label)
+                x: np.reshape(feature_data_test, (-1, 606)),
+                label: np.reshape(label_data_test, (-1, 1))}).reshape(-1),
+                                       label_data_test)
 
             saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
 
-    elif FLAGS.mode == 'predict':
+    elif mode == 'predict':
+        feature_data = []
+
         for key in detections:
             for i, _ in enumerate(detections[key]):
                 feature_data.append(compute_feature_vector(detections[key], i))
@@ -139,37 +125,39 @@ def main(_):
         with tf.Session() as sess:
             saver.restore(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
 
-            sess.run(tf.global_variables_initializer())
             result = y.eval(feed_dict={
                 x: np.reshape(feature_data, (-1, 606))})
-
             prediction = tf.round(result).eval()
 
-            for i, val in enumerate(prediction):
-                print('{}: {}'.format(i, val))
+        for i, val in enumerate(prediction):
+            print('{}: {}'.format(i, val))
+        return prediction
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a proposal network for labeling tasks')
     parser.add_argument('--mode', type=str, choices=['train', 'predict'],
                         help='define if you want to train the model or use it to predict',
                         required=True)
-    parser.add_argument('--path_to_data', type=str,
-                        help='path to train/prediction data', required=True)
-    parser.add_argument('--path_to_test_data', type=str,
-                        help='path to test data', required=False)
-    parser.add_argument('--path_to_gt', type=str,
-                        help='path to ground truth data', required=False)
+    parser.add_argument('--path_to_prediction_data', type=str,
+                        help='path to prediction data', required=False)
+    parser.add_argument('--path_to_training_data', type=str,
+                        help='train data (filename without "(features/labels)_(train/test).txt")',
+                        required=False)
     parser.add_argument('--iterations', type=int,
                         help='number of training iterations (relevant for training only)',
                         default=1000)
     parser.add_argument('--batch_size', type=int,
                         help='size of batches send to model',
                         default=64)
-    parser.add_argument('--alpha', type=float,
-                        help='minimal value of iou for accepting a label (for training only)',
-                        default=0.5)
+    parser.add_argument('--learning_rate', type=float,
+                        help='learning rate (hyperparameter for training)',
+                        default=0.05)
     FLAGS, unparsed = parser.parse_known_args()
-    if FLAGS.mode == 'train' and (FLAGS.path_to_test_data is None or FLAGS.path_to_gt is None):
-        parser.error(
-            'train mode requires the following additional arguments: path_to_test_data, path_to_gt')
+    args = parser.parse_args()
+
+    if FLAGS.mode == 'train' and (FLAGS.path_to_training_data is None):
+        parser.error('train mode requires path_to_training_data')
+    if FLAGS.mode == 'predict' and (FLAGS.path_to_prediction_data is None):
+        parser.error('train mode requires path to data')
+
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
