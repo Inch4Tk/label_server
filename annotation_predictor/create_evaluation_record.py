@@ -4,17 +4,24 @@ import os
 from datetime import datetime
 
 from annotation_predictor.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util import compute_label
 from annotation_predictor.settings import alpha, annotation_predictor_metadata_dir, \
     class_ids_oid_file
+from annotation_predictor.util import compute_label
 
 evaluation_record = {}
 
 def create_evaluation_record(path_to_detection_record: str, path_to_gt: str):
+    """
+    Create and save a record which represents the performance of an object-detector for each class
+    of the Open Images Dataset.
+    Args:
+        path_to_detection_record: detection-record created by create_detection_record.py
+        path_to_gt: Ground-Truth-Data for the images which have been analyzed by the object-detector
+    """
     with open(class_ids_oid_file) as f:
         class_ids_oid = json.load(f)
     for cls in class_ids_oid:
-        evaluation_record.update({cls: [0,0]})
+        evaluation_record.update({cls: [0, 0]})
 
     gt_reader = GroundTruthReader(path_to_gt)
     with open(path_to_detection_record) as file:

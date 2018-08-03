@@ -6,6 +6,13 @@ from datetime import datetime
 from annotation_predictor.settings import annotation_predictor_metadata_dir
 
 def concat_detection_record(record1: str, record2: str):
+    """
+    Concatenates two detection records and saves them in a new file.
+
+    Args:
+        record1: Path to first record, saved in a json-file.
+        record2: Path to second record, saved in a json-file
+    """
     timestamp = datetime.now().strftime('%Y_%m_%d_%H%M%S')
     filename = '{}.json'.format(timestamp)
     path_to_file = os.path.join(annotation_predictor_metadata_dir, filename)

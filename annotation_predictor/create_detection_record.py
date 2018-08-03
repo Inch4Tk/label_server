@@ -7,6 +7,13 @@ from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.settings import annotation_predictor_metadata_dir
 
 def create_detection_record(path_to_images: str, path_to_json=None):
+    """
+    Create and save detections from an object-detection model for a set of images.
+
+    Args:
+        path_to_images: Path to a directory which contains the images to be analysed.
+        path_to_json: Path to an existent json to which the detections will be appended.
+    """
     if path_to_json is None:
         images = os.listdir(path_to_images)
         result = {}

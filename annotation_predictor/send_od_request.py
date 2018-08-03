@@ -1,25 +1,24 @@
 import os
 import sys
 
-import numpy as np
 import tensorflow as tf
-from PIL import Image
 from grpc.beta import implementations
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
 from annotation_predictor.class_reader import ClassReader
 from annotation_predictor.settings import class_ids_coco_file
-
-def load_image(path_to_image: str):
-    img = Image.open(path_to_image).convert('RGB')
-    img.load()
-    data = np.asarray(img, dtype='uint8')
-    data = np.expand_dims(data, 0)
-
-    return data
+from annotation_predictor.util import load_image
 
 def send_od_request(path_to_image: str):
+    """
+    Send a detection request to an object-detector which is available under local port 9000.
+    Args:
+        path_to_image: Path to an image on which object will be detected
+
+    Returns: List of all detections on the given image
+
+    """
     channel = implementations.insecure_channel('localhost', 9000)
 
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
