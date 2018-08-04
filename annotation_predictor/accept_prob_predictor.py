@@ -151,7 +151,7 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument('--learning_rate', type=float,
                         help='learning rate (hyperparameter for training)',
-                        default=0.05)
+                        default=0.04)
     FLAGS, unparsed = parser.parse_known_args()
     args = parser.parse_args()
 
