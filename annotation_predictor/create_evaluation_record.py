@@ -3,10 +3,10 @@ import json
 import os
 from datetime import datetime
 
-from annotation_predictor.groundtruth_reader import GroundTruthReader
-from annotation_predictor.settings import alpha, annotation_predictor_metadata_dir, \
+from annotation_predictor.util.groundtruth_reader import GroundTruthReader
+from annotation_predictor.util.settings import alpha, annotation_predictor_metadata_dir, \
     class_ids_oid_file
-from annotation_predictor.util import compute_label
+from annotation_predictor.util.util import compute_label
 
 evaluation_record = {}
 

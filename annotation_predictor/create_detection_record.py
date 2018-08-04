@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from annotation_predictor.send_od_request import send_od_request
-from annotation_predictor.settings import annotation_predictor_metadata_dir
+from annotation_predictor.util.settings import annotation_predictor_metadata_dir
 
 def create_detection_record(path_to_images: str, path_to_json=None):
     """

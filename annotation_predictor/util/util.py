@@ -3,8 +3,8 @@ from collections.__init__ import OrderedDict
 import numpy as np
 from PIL import Image
 
-from annotation_predictor.class_reader import ClassReader
-from annotation_predictor.settings import class_ids_oid_file
+from annotation_predictor.util.class_reader import ClassReader
+from annotation_predictor.util.settings import class_ids_oid_file
 
 def compute_feature_vector(detections: list, position: int) -> list:
     """

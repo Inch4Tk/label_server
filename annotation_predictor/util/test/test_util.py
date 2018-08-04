@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from annotation_predictor.test.conftest import test_data
-from annotation_predictor.util import compute_iou, compute_feature_vector
+from annotation_predictor.util.test.conftest import test_data
+from annotation_predictor.util.util import compute_iou, compute_feature_vector
 
 def test_compute_iou_for_non_overlap():
     box1 = OrderedDict([('XMin', '0.1'), ('XMax', '0.2'), ('YMin', '0.1'), ('YMax', '0.2')])

@@ -7,8 +7,8 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from annotation_predictor.settings import model_dir
-from annotation_predictor.util import compute_feature_vector, evaluate_prediction_record
+from annotation_predictor.util.settings import model_dir
+from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
 
 tf.logging.set_verbosity(tf.logging.INFO)
 

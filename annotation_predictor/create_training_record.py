@@ -3,9 +3,9 @@ import json
 import os
 import random
 
-from annotation_predictor.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util import compute_feature_vector, compute_label
-from annotation_predictor.settings import alpha
+from annotation_predictor.util.groundtruth_reader import GroundTruthReader
+from annotation_predictor.util.util import compute_feature_vector, compute_label
+from annotation_predictor.util.settings import alpha
 
 def create_training_record(data_path: str, path_to_gt: str, ratio: float):
     """

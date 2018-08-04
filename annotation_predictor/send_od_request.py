@@ -6,9 +6,9 @@ from grpc.beta import implementations
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
-from annotation_predictor.class_reader import ClassReader
-from annotation_predictor.settings import class_ids_coco_file
-from annotation_predictor.util import load_image
+from annotation_predictor.util.class_reader import ClassReader
+from annotation_predictor.util.settings import class_ids_coco_file
+from annotation_predictor.util.util import load_image
 
 def send_od_request(path_to_image: str):
     """

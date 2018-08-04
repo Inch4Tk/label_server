@@ -1,5 +1,5 @@
-from annotation_predictor.groundtruth_reader import GroundTruthReader
-from annotation_predictor.test.conftest import test_data, test_file, test_dict
+from annotation_predictor.util.groundtruth_reader import GroundTruthReader
+from annotation_predictor.util.test.conftest import test_data, test_file, test_dict
 
 def test_get_groundtruth_annotation_finds_annotation_for_image():
     with GroundTruthReader(test_file) as test_ground_truth_reader:

@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw
 
 from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
-from annotation_predictor.settings import class_ids_oid_file
+from annotation_predictor.util.settings import class_ids_oid_file
 
 def visualize_detection(path_to_image: str):
     """
