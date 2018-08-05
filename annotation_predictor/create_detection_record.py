@@ -3,6 +3,8 @@ import json
 import os
 from datetime import datetime
 
+from PIL import Image
+
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.settings import annotation_predictor_metadata_dir
 
@@ -40,8 +42,12 @@ def create_detection_record(path_to_images: str, path_to_json=None):
             print('Evaluated {} of {} images'.format(i, total_images))
 
         path_to_image = os.path.join(path_to_images, image)
+        try:
+            Image.open(path_to_image).convert('RGB')
+        except (IOError, OSError):
+            os.remove(path_to_image)
+            continue
         result.update(send_od_request(path_to_image))
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
