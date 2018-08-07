@@ -1,15 +1,17 @@
 import argparse
 import json
 import os
-import random
+import sys
+
+import tensorflow as tf
 
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util.util import compute_feature_vector, compute_label
 from annotation_predictor.util.settings import alpha
+from annotation_predictor.util.util import compute_feature_vector, compute_label
 
 def create_training_record(data_path: str, path_to_gt: str, ratio: float):
     """
-    Postprocess a detection-record in order to easily use it for training a predictor
+    Post-process a detection-record in order to easily use it for training a predictor
     with accept_prob_predictor.py
     Args:
         data_path: Path to detection data created by create_detection_record.py
@@ -18,67 +20,75 @@ def create_training_record(data_path: str, path_to_gt: str, ratio: float):
     """
     with open(data_path) as file:
         data = json.load(file)
-    keys = list(data.keys())
-    random.shuffle(keys)
-    test_data = {}
 
-    for i, key in enumerate(keys):
-        if i > (len(keys) * ratio):
-            break
-        test_data.update({key: data[key]})
-        data.pop(key)
     basename = os.path.splitext(os.path.basename(data_path))[0]
     base = os.path.join(os.path.dirname(data_path), basename)
-    path_to_feature_data_train = '{}_{}'.format(base, 'features_train.txt')
-    path_to_label_data_train = '{}_{}'.format(base, 'labels_train.txt')
-    path_to_feature_data_test = '{}_{}'.format(base, 'features_test.txt')
-    path_to_label_data_test = '{}_{}'.format(base, 'labels_test.txt')
+    train_filename = '{}_{}'.format(base, 'train.tfrecords')
+    test_filename = '{}_{}'.format(base, 'test.tfrecords')
+
+    train_writer = tf.python_io.TFRecordWriter(train_filename)
+    test_writer = tf.python_io.TFRecordWriter(test_filename)
 
     gt_reader = GroundTruthReader(path_to_gt)
-    feature_data_train, label_data_train = compute_features(data, gt_reader)
-    feature_data_test, label_data_test = compute_features(test_data, gt_reader)
+    train_set_len = 1
+    test_set_len = 1
+    zeros = 0
+    ones = 0
 
-    feature_data_ones = []
-    for i, label in enumerate(label_data_train):
-        if label == 1:
-            feature_data_ones.append(feature_data_train[i])
+    for i, key in enumerate(data):
+        if not i % 1000:
+            print('Data: {}/{}'.format(i, len(data)))
+            sys.stdout.flush()
 
-    zero_offset = label_data_train.count(0) - label_data_train.count(1)
-    while zero_offset > 0:
-        for f in feature_data_ones:
-            if zero_offset == 0:
-                break
-            feature_data_train.append(f)
-            label_data_train.append(1.0)
-            zero_offset -= 1
+        features, labels = compute_feature(key, data[key], gt_reader)
 
-    with open(path_to_feature_data_train, 'w') as f:
-        json.dump(feature_data_train, f)
-    with open(path_to_label_data_train, 'w') as f:
-        json.dump(label_data_train, f)
-    with open(path_to_feature_data_test, 'w') as f:
-        json.dump(feature_data_test, f)
-    with open(path_to_label_data_test, 'w') as f:
-        json.dump(label_data_test, f)
+        for j, feat in enumerate(features):
+            label = labels[j]
+            if test_set_len / train_set_len >= ratio:
+                # balance out training dataset (there are normally more zero- than one-labels)
+                if (label == 0.0 and (zeros - ones <= 0)) or label == 1.0:
+                    train_set_len += 1
+                    if label == 1.0:
+                        ones += 1
+                    else:
+                        zeros += 1
+                    feature = {'train/feature': float_feature(feat),
+                               'train/label': float_feature(labels[j])}
+                    example = tf.train.Example(features=tf.train.Features(feature=feature))
+                    train_writer.write(example.SerializeToString())
+            else:
+                test_set_len += 1
+                feature = {'test/feature': float_feature(feat),
+                           'test/label': float_feature(labels[j])}
+                example = tf.train.Example(features=tf.train.Features(feature=feature))
+                test_writer.write(example.SerializeToString())
+    train_writer.close()
+    sys.stdout.flush()
 
-def compute_features(data: dict, gt_reader: GroundTruthReader):
+def float_feature(value):
+    if type(value) is not list:
+        value = [value]
+    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+def compute_feature(image_id: str, data: list, gt_reader: GroundTruthReader):
     """
     Args:
+        image_id: uniquely defines an image
         data: object-detection-data
         gt_reader: ground-truth-data corresponding to object-detection-data
 
-    Returns: feature_vectors for each detection and corresponding label
+    Returns: feature_vector and corresponding label
 
     """
+    gt = gt_reader.get_ground_truth_annotation(image_id)
     feature_data = []
     label_data = []
-    for key in data:
-        gt = gt_reader.get_ground_truth_annotation(key)
-        for i, _ in enumerate(data[key]):
-            feat = compute_feature_vector(data[key], i)
-            lab = compute_label(data[key][i], gt, alpha)
-            feature_data.append(feat)
-            label_data.append(lab)
+
+    for i, _ in enumerate(data):
+        feat = compute_feature_vector(data, i)
+        lab = compute_label(data[i], gt, alpha)
+        feature_data.append(feat)
+        label_data.append(lab)
     return feature_data, label_data
 
 if __name__ == '__main__':
