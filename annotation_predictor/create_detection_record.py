@@ -45,7 +45,6 @@ def create_detection_record(path_to_images: str, path_to_json=None):
         try:
             Image.open(path_to_image).convert('RGB')
         except (IOError, OSError):
-            os.remove(path_to_image)
             continue
         result.update(send_od_request(path_to_image))
 
