@@ -1,36 +1,22 @@
-import csv
+import json
 
 class GroundTruthReader:
-    def __init__(self, csvfile: str):
+    def __init__(self, path_to_gt: str):
         """
         Initiate an object representing a ground-truth-data-file.
         Args:
-            csvfile: File containing the ground-truth-data in cvs-format.
+            path_to_gt: Files separated by first hex-value in image-id
+            containing the ground-truth-data in json-format.
         """
-        self.csvfile = csvfile
-        self.gt_file = open(self.csvfile)
-        self.reader = csv.DictReader(self.gt_file)
-        self.gt_dict = self.parse_to_dict()
+        self.path_to_gt = path_to_gt
+        self.gt_dicts = [{} for _ in range(16)]
+
+        for i in range(16):
+            with open('{}_{}.json'.format(path_to_gt, hex(i)[2]), 'r') as f:
+                self.gt_dicts[i] = json.load(f)
 
     def __enter__(self):
         return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.gt_file.close()
-
-    def parse_to_dict(self) -> dict:
-        """
-        Read in a csv-file containing ground-truth data and save it in a dict
-        """
-        result = {}
-        for entry in self.reader:
-            key = entry['ImageID']
-            entry.pop('ImageID')
-            if key in result:
-                result[key].append(entry)
-            else:
-                result[key] = [entry]
-        return result
 
     def get_ground_truth_annotation(self, image_id: str) -> list:
         """
@@ -40,6 +26,7 @@ class GroundTruthReader:
 
         Returns: Ground truth data of the image.
         """
-        if image_id in self.gt_dict:
-            return self.gt_dict[image_id]
+        char0 = int(image_id[0], 16)
+        if image_id in self.gt_dicts[char0]:
+            return self.gt_dicts[char0][image_id]
         return []
