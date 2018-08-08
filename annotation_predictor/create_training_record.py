@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 
 import tensorflow as tf
 
@@ -21,8 +22,7 @@ def create_training_record(data_path: str, path_to_gt: str, ratio: float):
     with open(data_path) as file:
         data = json.load(file)
 
-    basename = os.path.splitext(os.path.basename(data_path))[0]
-    base = os.path.join(os.path.dirname(data_path), basename)
+    base = os.path.join(os.path.dirname(data_path), datetime.now().strftime('%Y_%m_%d_%H%M%S'))
     train_filename = '{}_{}'.format(base, 'train.tfrecords')
     test_filename = '{}_{}'.format(base, 'test.tfrecords')
 
