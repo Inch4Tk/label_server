@@ -61,6 +61,10 @@ def main(mode: str, detections=None):
     x = tf.placeholder(tf.float32, [None, 606])
     y = prob_model(x)
 
+    best_acc = 0.0
+    best_acc_ann = 0.0
+    best_acc_ver = 0.0
+    early_stopping_counter = 0
     saver = tf.train.Saver()
 
     if FLAGS and FLAGS.mode == 'train':
@@ -94,22 +98,16 @@ def main(mode: str, detections=None):
                                                                   capacity=50000,
                                                                   min_after_dequeue=0,
                                                                   allow_smaller_final_batch=True)
-
-            test_datapoint = {'test/feature': tf.FixedLenFeature([606], tf.float32),
-                              'test/label': tf.FixedLenFeature([1], tf.float32)}
-            test_queue = tf.train.string_input_producer([path_to_test_data], num_epochs=1)
-            test_reader = tf.TFRecordReader()
-            _, serialized_example = test_reader.read(test_queue)
-            test_data = tf.parse_single_example(serialized_example, features=test_datapoint)
-
-            test_feature = tf.cast(test_data['test/feature'], tf.float32)
-            test_label = tf.cast(test_data['test/label'], tf.float32)
-
-            test_features, test_labels = tf.train.shuffle_batch([test_feature, test_label],
-                                                                batch_size=99999999999,
-                                                                capacity=50000,
-                                                                min_after_dequeue=0,
-                                                                allow_smaller_final_batch=True)
+            test_feat = []
+            test_lbl = []
+            example = tf.train.Example()
+            for record in tf.python_io.tf_record_iterator(path_to_test_data):
+                example.ParseFromString(record)
+                f = example.features.feature
+                test_feat.append(np.asarray(f['test/feature'].float_list.value))
+                test_lbl.append(f['test/label'].float_list.value[0])
+            test_feat = np.reshape(test_feat, (-1, 606))
+            test_lbl = np.reshape(test_lbl, (-1, 1))
 
             init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
             sess.run(init_op)
@@ -120,7 +118,7 @@ def main(mode: str, detections=None):
             for batch_index in range(FLAGS.iterations):
                 try:
                     feat, lbl = sess.run([train_features, train_labels])
-                except OutOfRangeError as e:
+                except OutOfRangeError:
                     print('No more Training Data available')
                     break
 
@@ -129,15 +127,27 @@ def main(mode: str, detections=None):
                         x: feat,
                         _y: lbl})
                     print('step {},\t training accuracy {}'.format(batch_index, train_accuracy))
+                    y_test = y.eval(feed_dict={x: test_feat, _y: test_lbl})
+                    acc, acc_ann, acc_ver = evaluate_prediction_record(y_test, test_lbl)
+                    if (acc_ann >= best_acc_ann) and (acc_ver >= best_acc_ver):
+                        print('{}\t{}'.format(acc_ann, acc_ver))
+                        best_acc = acc
+                        best_acc_ann = acc_ann
+                        best_acc_ver = acc_ver
+                        early_stopping_counter = 0
+                        saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
+                    elif early_stopping_counter == 20:
+                        print('Stopped early at batch {}/{}'.format(batch_index, FLAGS.iterations))
+                        break
+                    else:
+                        early_stopping_counter += 1
+
                 train_op.run(feed_dict={x: feat,
                                         _y: lbl})
 
-            test_feat, test_lbl = sess.run([test_features, test_labels])
-            evaluate_prediction_record(y.eval(feed_dict={
-                x: test_feat,
-                _y: test_lbl}), test_lbl)
-
-            saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
+            print('Accuracy:\t{}'.format(best_acc))
+            print('Accuracy Ann:\t{}'.format(best_acc_ann))
+            print('Accuracy Ver:\t{}'.format(best_acc_ver))
 
             # Stop the threads
             coord.request_stop()

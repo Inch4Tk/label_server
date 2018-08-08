@@ -100,12 +100,17 @@ def compute_iou(det_a: OrderedDict, det_b: OrderedDict) -> float:
 
     return iou
 
-def evaluate_prediction_record(pred: np.ndarray, label: list):
+def evaluate_prediction_record(pred: np.ndarray, label: np.ndarray):
     """
     Evaluates the performance of an acceptance-predictor created by accept_prob_predictor.py
     Args:
         pred: Array of acceptance-predictions for a set of images
         label: Ground-truth data for those predictions.
+
+    Returns:
+        acc: percentage of correct predictions
+        acc_ann: percentage of correct predictions with label 0
+        acc_ver: percentage of correct predictions with label 1
     """
     correct = 0
     correct_ver = 0
@@ -125,15 +130,19 @@ def evaluate_prediction_record(pred: np.ndarray, label: list):
                 correct += 1
                 correct_ann += 1
 
-    print('Accuracy:\t{} ({} of {})'.format(round(correct / len(pred), 5),
-                                            correct, len(pred)))
-    print('Accuracy Ann:\t{} ({} of {})'.format(round(correct_ann / nr_ann, 5),
-                                                correct_ann, nr_ann))
-    if nr_ver == 0:
-        print('Accuracy Ver:\t{} ({} of {})'.format(0, correct_ver, nr_ver))
+    acc = round(correct / len(pred), 5)
+
+    if nr_ann == 0:
+        acc_ann = 0
     else:
-        print('Accuracy Ver:\t{} ({} of {})'.format(round(correct_ver / nr_ver, 5),
-                                                    correct_ver, nr_ver))
+        acc_ann = round(correct_ann / nr_ann, 5)
+
+    if nr_ver == 0:
+        acc_ver = 0
+    else:
+        acc_ver = round(correct_ver / nr_ver, 5)
+
+    return acc, acc_ann, acc_ver
 
 def compute_label(detection: OrderedDict, ground_truth: list, alpha: float) -> float:
     """
