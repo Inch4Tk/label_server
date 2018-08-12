@@ -13,13 +13,14 @@ import { NoMatch } from "./components/NoMatch.jsx";
 // Containers
 import BatchOverviewApp from "./containers/BatchOverviewApp.jsx";
 import ImageBatchDetailApp from "./containers/ImageBatchDetailApp.jsx";
+import AnnotationInterfaceApp from "./containers/LabelInterfaceApp.jsx";
 
 // Redux
 import thunkMiddleware from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { createStore, applyMiddleware } from "redux"
 import rootReducer from "./reducers";
-import { fetchBatches } from "./actions";
+import {fetchBatches} from "./actions";
 
 const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
 store.dispatch(fetchBatches());
@@ -43,6 +44,12 @@ const routes = [
         exact: true,
         navDynamic: [{ link: "/todo", name: "settings" }, { link: "/todo", name: "instructions" }],
         main: (props) => (<ImageBatchDetailApp {...props}/>)
+    },
+    {
+        path: "/label_images/:batch_id/:task_id",
+        exact: true,
+        navDynamic: [{ link: "/todo", name: "settings" }, { link: "/todo", name: "instructions" }],
+        main: (props) => (<AnnotationInterfaceApp {...props}/>)
     },
     {
         path: "/todo",

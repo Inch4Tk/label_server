@@ -4,7 +4,7 @@ import { NoMatch } from "./NoMatch.jsx"
 
 const ImageTaskListElement = ({ batchId, task }) => (
     <li>
-        <Link to={"/image_batch/" + batchId + "/" + task.id}>
+        <Link to={"/label_images/" + batchId + "/" + task.id}>
             {task.id}: {task.filename}
         </Link> labeled: {task.is_labeled.toString()}
     </li>
