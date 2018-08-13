@@ -27,7 +27,8 @@ class LabelInterface extends React.Component {
         this.state = {
             boxes: [],
             image_list: [],
-            task_id: -1
+            task_id: -1,
+            user_input: []
         };
         this.handle_click = this.handle_click.bind(this);
     }
@@ -50,7 +51,8 @@ class LabelInterface extends React.Component {
             boxes: this.state.boxes,
             image_list: image_list,
             task_id: task.id,
-            image: image
+            image: image,
+            user_input: []
         });
         console.log("Component initialized")
     }
@@ -68,11 +70,20 @@ class LabelInterface extends React.Component {
 
         ctx.beginPath();
         ctx.strokeStyle = "red";
-        for (let i = 0; i < this.state.boxes.length; i++) {
-            ctx.rect(this.state.boxes[i][0], // fill at (x, y) with (width, height)
-                this.state.boxes[i][1],
-                this.state.boxes[i][2],
-                this.state.boxes[i][3]);
+
+        //show existing user input via points
+        let ui = this.state.user_input;
+        for (let i = 0; i < (ui.length / 2); i++) {
+            ctx.rect(ui[0], ui[1], 1, 1);
+            ctx.rect(ui[2], ui[3], 1, 1);
+            ctx.rect(ui[4], ui[5], 1, 1);
+            ctx.rect(ui[6], ui[7], 1, 1);
+        }
+
+        //render finished bounding boxes
+        let b = this.state.boxes;
+        for (let i = 0; i < b.length; i++) {
+            ctx.rect(b[i][0], b[i][1], b[i][2], b[i][3]);
         }
         ctx.stroke();
 
@@ -82,8 +93,14 @@ class LabelInterface extends React.Component {
         let bounds = this.canvasRev.current.getBoundingClientRect();
         let x = event.clientX - bounds.left;
         let y = event.clientY - bounds.top;
-        console.log(x);
-        console.log(y)
+
+        this.state.user_input.push(x, y);
+
+        if (this.state.user_input.length === 8) {
+            this.add_new_bounding_box()
+        }
+        this.render_image()
+
     }
 
     load_image(url) {
@@ -93,7 +110,28 @@ class LabelInterface extends React.Component {
         return image
     }
 
+    add_new_bounding_box() {
+        let prevState = this.state;
+        let ui = this.state.user_input;
+        let x_min = Math.min(ui[0], ui[2], ui[4], ui[6]);
+        let x_max = Math.max(ui[0], ui[2], ui[4], ui[6]);
+        let y_min = Math.min(ui[1], ui[3], ui[5], ui[7]);
+        let y_max = Math.max(ui[1], ui[3], ui[5], ui[7]);
+
+        let new_box = [x_min, y_min, x_max - x_min, y_max - y_min];
+        prevState.boxes.push(new_box);
+
+        this.setState({
+            boxes: prevState.boxes,
+            image_list: prevState.image_list,
+            task_id: prevState.task_id,
+            image: prevState.image,
+            user_input: []
+        });
+    }
+
     render() {
+        console.log("rendering");
         let image_list = this.state.image_list;
         let index = get_index_for_image(image_list, this.state.task_id);
         return ([
@@ -112,6 +150,5 @@ class LabelInterface extends React.Component {
         ])
     }
 }
-
 
 export {LabelInterface}
