@@ -129,14 +129,14 @@ def main(mode: str, detections=None):
                     print('step {},\t training accuracy {}'.format(batch_index, train_accuracy))
                     y_test = y.eval(feed_dict={x: test_feat, _y: test_lbl})
                     acc, acc_ann, acc_ver = evaluate_prediction_record(y_test, test_lbl)
-                    if (acc_ann >= best_acc_ann) and (acc_ver >= best_acc_ver):
+                    if acc_ann + acc_ver > best_acc_ann + best_acc_ver:
                         print('{}\t{}'.format(acc_ann, acc_ver))
                         best_acc = acc
                         best_acc_ann = acc_ann
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
                         saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
-                    elif early_stopping_counter == 20:
+                    elif early_stopping_counter == 25:
                         print('Stopped early at batch {}/{}'.format(batch_index, FLAGS.iterations))
                         break
                     else:

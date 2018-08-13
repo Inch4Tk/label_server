@@ -117,16 +117,17 @@ def evaluate_prediction_record(pred: np.ndarray, label: np.ndarray):
     correct_ann = 0
     nr_ann = 0
     nr_ver = 0
+
     for i, prediction in enumerate(pred):
-        if prediction > 0.5:
+        if label[i] == 1:
             nr_ver += 1
-            if label[i] == 1:
+            if prediction > 0.5:
                 correct += 1
                 correct_ver += 1
 
         else:
             nr_ann += 1
-            if label[i] == 0:
+            if prediction < 0.5:
                 correct += 1
                 correct_ann += 1
 
