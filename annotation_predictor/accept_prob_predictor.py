@@ -85,7 +85,7 @@ def main(mode: str, detections=None):
 
             train_datapoint = {'train/feature': tf.FixedLenFeature([606], tf.float32),
                                'train/label': tf.FixedLenFeature([1], tf.float32)}
-            train_queue = tf.train.string_input_producer([path_to_train_data], num_epochs=1)
+            train_queue = tf.train.string_input_producer([path_to_train_data], num_epochs=50)
             train_reader = tf.TFRecordReader()
             _, serialized_example = train_reader.read(train_queue)
             train_data = tf.parse_single_example(serialized_example, features=train_datapoint)
@@ -136,7 +136,7 @@ def main(mode: str, detections=None):
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
                         saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
-                    elif early_stopping_counter == 25:
+                    elif early_stopping_counter == 50:
                         print('Stopped early at batch {}/{}'.format(batch_index, FLAGS.iterations))
                         break
                     else:
@@ -192,7 +192,7 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument('--learning_rate', type=float,
                         help='learning rate (hyperparameter for training)',
-                        default=0.04)
+                        default=0.1)
     FLAGS, unparsed = parser.parse_known_args()
     args = parser.parse_args()
 
