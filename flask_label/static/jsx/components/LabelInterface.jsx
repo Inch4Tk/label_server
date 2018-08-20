@@ -20,6 +20,14 @@ function get_index_for_image(image_list, id) {
     return -1
 }
 
+function compute_resize_factor(img_width, img_height) {
+    //Resize factor w.r.t. the canvas size (1200,800) s.t. image fits the canvas as well as possible
+    //Add a border of width 10 in order to make clicks close to the boarder easier to handle
+    let resize_factor_width = 1180 / img_width;
+    let resize_factor_height = 780 / img_height;
+    return Math.min(resize_factor_width, resize_factor_height);
+}
+
 class LabelInterface extends React.Component {
     constructor(props) {
         super(props);
@@ -37,7 +45,6 @@ class LabelInterface extends React.Component {
     componentDidMount() {
         console.log("Component did mount");
         const {task, batch} = this.props;
-
         const tasks = batch.tasks;
         let image_list = tasks.map((task) =>
             <li key={task.id}>
@@ -47,15 +54,23 @@ class LabelInterface extends React.Component {
         );
 
         let image = this.load_image("/api/serve_image/" + task.id + "/");
+        let resize_factor = compute_resize_factor(image.width, image.height);
 
         fetch("/api/serve_labels/" + task.id + "/")
             .then(
                 response => response.json(),
                 error => console.log('An error occurred.', error))
-            .then(json => this.setState({
-                classes: json.classes,
-                boxes: json.boxes,
-            }));
+            .then(json => {
+                    for (let i = 0; i < json.boxes.length; i++) {
+                        for (let j = 0; j < json.boxes[i].length; j++) {
+                            json.boxes[i][j] = json.boxes[i][j] * resize_factor;
+                        }
+                    }
+                    this.setState({
+                        classes: json.classes,
+                        boxes: json.boxes,
+                    })
+                });
         let prevState = this.state;
 
         this.setState({
@@ -69,45 +84,50 @@ class LabelInterface extends React.Component {
     }
 
     render_image() {
-        //Resize image w.r.t. the canvas size (1200,800) s.t. it fits the canvas as well as possible
-        let resize_factor_width = 1200 / this.state.image.width;
-        let resize_factor_height = 800 / this.state.image.height;
-        let resize_factor = Math.min(resize_factor_width, resize_factor_height);
-        let new_width = this.state.image.width * resize_factor;
-        let new_height = this.state.image.height * resize_factor;
+        let img_width = this.state.image.width;
+        let img_height = this.state.image.height;
+        let resize_factor = compute_resize_factor(img_width, img_height);
+        let new_width = img_width * resize_factor;
+        let new_height = img_height * resize_factor;
 
         const ctx = this.canvasRev.current.getContext('2d');
-        ctx.drawImage(this.state.image, 0, 0, new_width, new_height);
+        ctx.drawImage(this.state.image, 10, 10, new_width, new_height);
         ctx.beginPath();
         ctx.lineWidth = 3;
         ctx.font = "20px Arial";
         ctx.fillStyle = "red";
         ctx.strokeStyle = "red";
 
-        //show existing user input via points
+        //show existing user input via points, add border size of 10 to each point
         let ui = this.state.user_input;
         for (let i = 0; i < (ui.length / 2); i++) {
-            ctx.rect(ui[0], ui[1], 1, 1);
-            ctx.rect(ui[2], ui[3], 1, 1);
-            ctx.rect(ui[4], ui[5], 1, 1);
-            ctx.rect(ui[6], ui[7], 1, 1);
+            ctx.rect(ui[0] + 10, ui[1] + 10, 1, 1);
+            ctx.rect(ui[2] + 10, ui[3] + 10, 1, 1);
+            ctx.rect(ui[4] + 10, ui[5] + 10, 1, 1);
+            ctx.rect(ui[6] + 10, ui[7] + 10, 1, 1);
         }
 
         //render finished bounding boxes
         let b = this.state.boxes;
         let c = this.state.classes;
         for (let i = 0; i < b.length; i++) {
-            ctx.fillText(c[i], b[i][0]+5, b[i][1]+20);
-            ctx.rect(b[i][0], b[i][1], b[i][2], b[i][3]);
+            ctx.fillText(c[i], b[i][0]+15, b[i][1]+30);
+            ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
         }
         ctx.stroke();
 
     }
 
     handle_click(event) {
+        let img_width = this.state.image.width;
+        let img_height = this.state.image.height;
+        let resize_factor = compute_resize_factor(img_width, img_height);
+        let new_width = img_width * resize_factor;
+        let new_height = img_height * resize_factor;
         let bounds = this.canvasRev.current.getBoundingClientRect();
-        let x = event.clientX - bounds.left;
-        let y = event.clientY - bounds.top;
+        //handle clicks on border and map input to image coordinates
+        let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width+10) - 10;
+        let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height+10) - 10;
 
         this.state.user_input.push(x, y);
 
@@ -133,7 +153,7 @@ class LabelInterface extends React.Component {
         let y_min = Math.min(ui[1], ui[3], ui[5], ui[7]);
         let y_max = Math.max(ui[1], ui[3], ui[5], ui[7]);
 
-        let new_box = [x_min, y_min, x_max - x_min, y_max - y_min];
+        let new_box = [x_min, y_min, x_max, y_max];
 
         let c = prompt("Please enter the class of your label");
 
@@ -152,6 +172,7 @@ class LabelInterface extends React.Component {
 
     render() {
         console.log("rendering");
+        console.log(this.state);
         if (this.state.image) {
             this.render_image();
         }

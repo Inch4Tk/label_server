@@ -134,11 +134,9 @@ def serve_labels(img_id):
             boxes[i].append(int(ymin.text, 10))
 
         for i, xmax in enumerate(root.findall("./object/bndbox/xmax")):
-            xmin = boxes[i][0]
-            boxes[i].append(int(xmax.text, 10) - xmin)
+            boxes[i].append(int(xmax.text, 10))
 
         for i, ymax in enumerate(root.findall("./object/bndbox/ymax")):
-            ymin = boxes[i][1]
-            boxes[i].append(int(ymax.text, 10) - ymin)
+            boxes[i].append(int(ymax.text, 10))
 
     return jsonify({'classes': classes, 'boxes': boxes})
