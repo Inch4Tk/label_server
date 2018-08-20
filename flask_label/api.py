@@ -1,9 +1,11 @@
 import os
 import random
+import xml.etree.ElementTree as ET
 
 from flask import (
-    Blueprint, redirect, current_app, send_from_directory, jsonify, request
+    Blueprint, current_app, send_from_directory, jsonify, request
 )
+
 from flask_label.auth import api_login_required
 from flask_label.database import db
 from flask_label.models import (
@@ -11,7 +13,7 @@ from flask_label.models import (
 )
 
 bp = Blueprint("api", __name__,
-                url_prefix="/api")
+               url_prefix="/api")
 
 def batch_statistics(batch):
     lc = 0
@@ -91,3 +93,52 @@ def serve_image(img_id):
 
     current_app.logger.info(os.path.join(img_path, img_task.filename))
     return send_from_directory(img_path, img_task.filename)
+
+@bp.route("/serve_labels/<int:img_id>/")
+@api_login_required
+def serve_labels(img_id):
+    """Serves labels from an xml-file for an image from the instance folder
+
+    Args:
+        img_id (int): Is the same as task id, since every task is matched to one image.
+    """
+
+    classes = []
+    boxes = []
+
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    path = os.path.join(
+        current_app.instance_path,
+        current_app.config["IMAGE_DIR"],
+        img_task.batch.dirname,
+        current_app.config["IMAGE_LABEL_SUBDIR"],
+        img_task.filename
+    )
+
+    base = os.path.splitext(path)[0]
+    path = base + ".xml"
+
+    if os.path.exists(path):
+        tree = ET.parse(path)
+        root = tree.getroot()
+
+        for name in root.findall("./object/name"):
+            classes.append(name.text)
+
+        for i, xmin in enumerate(root.findall("./object/bndbox/xmin")):
+            boxes.append([])
+            boxes[i].append(int(xmin.text, 10))
+
+        for i, ymin in enumerate(root.findall("./object/bndbox/ymin")):
+            boxes[i].append(int(ymin.text, 10))
+
+        for i, xmax in enumerate(root.findall("./object/bndbox/xmax")):
+            xmin = boxes[i][0]
+            boxes[i].append(int(xmax.text, 10) - xmin)
+
+        for i, ymax in enumerate(root.findall("./object/bndbox/ymax")):
+            ymin = boxes[i][1]
+            boxes[i].append(int(ymax.text, 10) - ymin)
+
+    return jsonify({'classes': classes, 'boxes': boxes})

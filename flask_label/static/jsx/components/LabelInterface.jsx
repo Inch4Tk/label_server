@@ -25,6 +25,7 @@ class LabelInterface extends React.Component {
         super(props);
         this.canvasRev = React.createRef();
         this.state = {
+            classes: [],
             boxes: [],
             image_list: [],
             task_id: -1,
@@ -47,28 +48,40 @@ class LabelInterface extends React.Component {
 
         let image = this.load_image("/api/serve_image/" + task.id + "/");
 
+        fetch("/api/serve_labels/" + task.id + "/")
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error))
+            .then(json => this.setState({
+                classes: json.classes,
+                boxes: json.boxes,
+            }));
+        let prevState = this.state;
+
         this.setState({
-            boxes: this.state.boxes,
+            classes: prevState.classes,
+            boxes: prevState.boxes,
             image_list: image_list,
             task_id: task.id,
             image: image,
             user_input: []
         });
-        console.log("Component initialized")
     }
 
     render_image() {
-        const ctx = this.canvasRev.current.getContext('2d');
-        ctx.lineWidth = 5;
         //Resize image w.r.t. the canvas size (1200,800) s.t. it fits the canvas as well as possible
         let resize_factor_width = 1200 / this.state.image.width;
         let resize_factor_height = 800 / this.state.image.height;
         let resize_factor = Math.min(resize_factor_width, resize_factor_height);
         let new_width = this.state.image.width * resize_factor;
         let new_height = this.state.image.height * resize_factor;
-        ctx.drawImage(this.state.image, 0, 0, new_width, new_height);
 
+        const ctx = this.canvasRev.current.getContext('2d');
+        ctx.drawImage(this.state.image, 0, 0, new_width, new_height);
         ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "red";
         ctx.strokeStyle = "red";
 
         //show existing user input via points
@@ -82,7 +95,9 @@ class LabelInterface extends React.Component {
 
         //render finished bounding boxes
         let b = this.state.boxes;
+        let c = this.state.classes;
         for (let i = 0; i < b.length; i++) {
+            ctx.fillText(c[i], b[i][0]+5, b[i][1]+20);
             ctx.rect(b[i][0], b[i][1], b[i][2], b[i][3]);
         }
         ctx.stroke();
@@ -122,6 +137,7 @@ class LabelInterface extends React.Component {
         prevState.boxes.push(new_box);
 
         this.setState({
+            classes: prevState.classes,
             boxes: prevState.boxes,
             image_list: prevState.image_list,
             task_id: prevState.task_id,
@@ -132,6 +148,9 @@ class LabelInterface extends React.Component {
 
     render() {
         console.log("rendering");
+        if (this.state.image) {
+            this.render_image();
+        }
         let image_list = this.state.image_list;
         let index = get_index_for_image(image_list, this.state.task_id);
         return ([
