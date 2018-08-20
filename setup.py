@@ -12,7 +12,7 @@ setup(
         "flask-sqlalchemy",
         "flask-migrate",
         "flask-marshmallow",
-        "flask-sqlalchemy",
-        "marshmallow-sqlalchemy"
+        "marshmallow-sqlalchemy",
+        'tensorflow'
     ],
 )

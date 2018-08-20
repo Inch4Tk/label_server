@@ -1,0 +1,5 @@
+ImageID,Source,LabelName,Confidence,XMin,XMax,YMin,YMax,IsOccluded,IsTruncated,IsGroupOf,IsDepiction,IsInside
+nottest_id,freeform,/m/05656,0.8,0.5,0.3,0.9,0.7,0,1,0,0,1
+test_id,freeform,/m/04242,0.1,0.1,0.2,0.3,0.4,0,0,0,0,1
+test_id,freeform,/m/0cdn1,0.5,0.6,0.7,0.8,0.9,1,0,1,0,1
+test_id_fake,freeform,/m/01234,0.1,0.8,0.4,0.3,0.4,0,0,1,0,1
