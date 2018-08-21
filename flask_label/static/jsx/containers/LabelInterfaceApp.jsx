@@ -1,5 +1,6 @@
 import {connect} from "react-redux";
 import {LabelInterface} from "../components/LabelInterface.jsx";
+import {fetchBatches} from "../actions";
 
 function getBatchWithId(state, id) {
     return state.batches.imageBatches.find(x => x.id == id);
@@ -18,7 +19,7 @@ const mapStateToProps = (state, {match} ) => {
 };
 
 const mapDispatchToProps = dispatch => ({
-    //toggleTodo: id => dispatch(toggleTodo(id))
+    update_store: () => dispatch(fetchBatches())
 });
 
 // Tie state and visualization together

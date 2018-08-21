@@ -1,6 +1,7 @@
 import os
 import random
 import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 from flask import (
     Blueprint, current_app, send_from_directory, jsonify, request
@@ -8,6 +9,7 @@ from flask import (
 
 from flask_label.auth import api_login_required
 from flask_label.database import db
+from flask_label.database_cli import db_update_task
 from flask_label.models import (
     ImageTask, ImageBatch, VideoBatch, image_batch_schema, video_batch_schema, image_task_schema
 )
@@ -110,33 +112,81 @@ def serve_labels(img_id):
 
     path = os.path.join(
         current_app.instance_path,
-        current_app.config["IMAGE_DIR"],
+        current_app.config['IMAGE_DIR'],
         img_task.batch.dirname,
-        current_app.config["IMAGE_LABEL_SUBDIR"],
+        current_app.config['IMAGE_LABEL_SUBDIR'],
         img_task.filename
     )
 
     base = os.path.splitext(path)[0]
-    path = base + ".xml"
+    path = base + '.xml'
 
     if os.path.exists(path):
         tree = ET.parse(path)
         root = tree.getroot()
 
-        for name in root.findall("./object/name"):
+        for name in root.findall('./object/name'):
             classes.append(name.text)
 
-        for i, xmin in enumerate(root.findall("./object/bndbox/xmin")):
+        for i, xmin in enumerate(root.findall('./object/bndbox/xmin')):
             boxes.append([])
             boxes[i].append(int(xmin.text, 10))
 
-        for i, ymin in enumerate(root.findall("./object/bndbox/ymin")):
+        for i, ymin in enumerate(root.findall('./object/bndbox/ymin')):
             boxes[i].append(int(ymin.text, 10))
 
-        for i, xmax in enumerate(root.findall("./object/bndbox/xmax")):
+        for i, xmax in enumerate(root.findall('./object/bndbox/xmax')):
             boxes[i].append(int(xmax.text, 10))
 
-        for i, ymax in enumerate(root.findall("./object/bndbox/ymax")):
+        for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
             boxes[i].append(int(ymax.text, 10))
 
     return jsonify({'classes': classes, 'boxes': boxes})
+
+@bp.route('/save_labels/<int:img_id>/', methods=['POST'])
+@api_login_required
+def save_labels(img_id):
+    """"Saves labels entered by a labeler for an image from the instance folder
+
+    Args:
+        img_id (int): Is the same as task id, since every task is matched to one image.
+    """
+
+    data = request.get_json()
+    classes = data['classes']
+    boxes = data['boxes']
+
+    if len(classes) != 0:
+        img_task = ImageTask.query.filter_by(id=img_id).first()
+
+        path = os.path.join(
+            current_app.instance_path,
+            current_app.config['IMAGE_DIR'],
+            img_task.batch.dirname,
+            current_app.config['IMAGE_LABEL_SUBDIR'],
+            img_task.filename
+        )
+
+        base = os.path.splitext(path)[0]
+        path = base + '.xml'
+
+        root = ET.Element('annotation')
+
+        for i, c in enumerate(classes):
+            obj = ET.SubElement(root, 'object')
+            ET.SubElement(obj, 'name').text = c
+            box = ET.SubElement(obj, 'bndbox')
+            ET.SubElement(box, 'xmin').text = str(round(boxes[i][0]))
+            ET.SubElement(box, 'ymin').text = str(round(boxes[i][1]))
+            ET.SubElement(box, 'xmax').text = str(round(boxes[i][2]))
+            ET.SubElement(box, 'ymax').text = str(round(boxes[i][3]))
+
+        rough_str = ET.tostring(root)
+        pretty_str = minidom.parseString(rough_str).toprettyxml(indent="  ")
+
+        with open(path, 'w') as f:
+            f.write(pretty_str)
+
+        db_update_task()
+
+    return jsonify(success=True)

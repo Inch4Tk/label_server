@@ -61,16 +61,16 @@ class LabelInterface extends React.Component {
                 response => response.json(),
                 error => console.log('An error occurred.', error))
             .then(json => {
-                    for (let i = 0; i < json.boxes.length; i++) {
-                        for (let j = 0; j < json.boxes[i].length; j++) {
-                            json.boxes[i][j] = json.boxes[i][j] * resize_factor;
-                        }
+                for (let i = 0; i < json.boxes.length; i++) {
+                    for (let j = 0; j < json.boxes[i].length; j++) {
+                        json.boxes[i][j] = json.boxes[i][j] * resize_factor;
                     }
-                    this.setState({
-                        classes: json.classes,
-                        boxes: json.boxes,
-                    })
-                });
+                }
+                this.setState({
+                    classes: json.classes,
+                    boxes: json.boxes,
+                })
+            });
         let prevState = this.state;
 
         this.setState({
@@ -81,6 +81,28 @@ class LabelInterface extends React.Component {
             image: image,
             user_input: []
         });
+    }
+
+    componentWillUnmount() {
+        console.log("Component will unmount");
+        if (this.state.classes.length !== 0) {
+            let url = "/api/save_labels/" + this.state.task_id + "/";
+            let method = "POST";
+            let resize_factor = compute_resize_factor(this.state.image.width, this.state.image.height);
+            let boxes = this.state.boxes;
+            for (let i = 0; i < boxes.length; i++) {
+                for (let j = 0; j < boxes[i].length; j++) {
+                    boxes[i][j] = boxes[i][j] / resize_factor;
+                }
+            }
+            let postData = JSON.stringify({"classes": this.state.classes, "boxes": boxes});
+            let shouldBeAsync = true;
+            let request = new XMLHttpRequest();
+            request.open(method, url, shouldBeAsync);
+            request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            request.send(postData);
+            this.props.update_store();
+        }
     }
 
     render_image() {
@@ -111,7 +133,7 @@ class LabelInterface extends React.Component {
         let b = this.state.boxes;
         let c = this.state.classes;
         for (let i = 0; i < b.length; i++) {
-            ctx.fillText(c[i], b[i][0]+15, b[i][1]+30);
+            ctx.fillText(c[i], b[i][0] + 15, b[i][1] + 30);
             ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
         }
         ctx.stroke();
@@ -126,8 +148,8 @@ class LabelInterface extends React.Component {
         let new_height = img_height * resize_factor;
         let bounds = this.canvasRev.current.getBoundingClientRect();
         //handle clicks on border and map input to image coordinates
-        let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width+10) - 10;
-        let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height+10) - 10;
+        let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
+        let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
 
         this.state.user_input.push(x, y);
 
