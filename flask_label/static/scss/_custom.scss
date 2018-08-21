@@ -137,7 +137,7 @@ input[type=submit] {
 }
 
 /* The sidebar menu */
-.sidenav {
+.filenav {
     height: 100%; /* Full-height: remove this if you want "auto" height */
     width: 240px; /* Set the width of the sidebar */
     position: fixed; /* Fixed Sidebar (stay in place on scroll) */
@@ -149,8 +149,7 @@ input[type=submit] {
     padding-top: 20px;
 }
 
-/* The navigation menu links */
-.sidenav a {
+.filenav a {
     padding: 3px 0 3px 0;
     text-decoration: none;
     font-size: 16px;
@@ -159,7 +158,7 @@ input[type=submit] {
 }
 
 /* When you mouse over the navigation links, change their color */
-.sidenav a:hover {
+.filenav a:hover {
     color: #f1f1f1;
 }
 

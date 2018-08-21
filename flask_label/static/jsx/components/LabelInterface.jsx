@@ -1,7 +1,10 @@
 import React from "react";
 import {Link} from "react-router-dom"
 
-function render_filename(task) {
+function render_filename(task, current_task) {
+    if (task === current_task) {
+        return <mark>{task.filename}</mark>
+    }
     if (task.is_labeled === true) {
         return <s>{task.filename}</s>
     }
@@ -45,11 +48,13 @@ class LabelInterface extends React.Component {
     componentDidMount() {
         console.log("Component did mount");
         const {task, batch} = this.props;
+        let current_task = task;
         const tasks = batch.tasks;
         let image_list = tasks.map((task) =>
             <li key={task.id}>
-                <Link
-                    to={"/label_images/" + batch.id + "/" + task.id}> {render_filename(task)}</Link>
+                <Link to={"/label_images/" + batch.id + "/" + task.id}>
+                    {render_filename(task, current_task)}
+                </Link>
             </li>
         );
 
@@ -201,7 +206,7 @@ class LabelInterface extends React.Component {
         let image_list = this.state.image_list;
         let index = get_index_for_image(image_list, this.state.task_id);
         return ([
-            <div key="1" className="sidenav">
+            <div key="1" className="filenav">
                 <ul>{image_list}</ul>
             </div>,
             <h1 key="2"> Label Image</h1>,
