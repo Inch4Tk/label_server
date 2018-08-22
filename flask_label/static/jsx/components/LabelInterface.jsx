@@ -71,7 +71,7 @@ class LabelInterface extends React.Component {
                 for (let i = 0; i < json.boxes.length; i++) {
                     deleted.push(false);
                     for (let j = 0; j < json.boxes[i].length; j++) {
-                        json.boxes[i][j] = json.boxes[i][j] * resize_factor;
+                        json.boxes[i][j] = json.boxes[i][j] * res_fac;
                     }
                 }
 
@@ -115,11 +115,15 @@ class LabelInterface extends React.Component {
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
             let classes = this.state.classes;
-            for (let i = 0; i < this.state.boxes.length; i++) {
+            let len = classes.length;
+            let current = 0;
+            for (let i = 0; i < len; i++) {
                 if (this.state.deleted[i]) {
-                    boxes.splice(i, 1);
-                    classes.splice(i, 1);
-                    i--; //decrement counter as future elements will be moved one index to the left
+                    boxes.splice(current, 1);
+                    classes.splice(current, 1);
+                }
+                else {
+                    current++;
                 }
             }
 
