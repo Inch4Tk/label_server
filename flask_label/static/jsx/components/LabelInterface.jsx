@@ -38,7 +38,9 @@ class LabelInterface extends React.Component {
         this.state = {
             classes: [],
             boxes: [],
-            image_list: [],
+            image_list: -1,
+            deleted: [],
+            history_list: -1,
             task_id: -1,
             user_input: []
         };
@@ -57,9 +59,9 @@ class LabelInterface extends React.Component {
                 </Link>
             </li>
         );
-
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let resize_factor = compute_resize_factor(image.width, image.height);
+        let deleted = [];
 
         fetch("/api/serve_labels/" + task.id + "/")
             .then(
@@ -67,43 +69,73 @@ class LabelInterface extends React.Component {
                 error => console.log('An error occurred.', error))
             .then(json => {
                 for (let i = 0; i < json.boxes.length; i++) {
+                    deleted.push(false);
                     for (let j = 0; j < json.boxes[i].length; j++) {
                         json.boxes[i][j] = json.boxes[i][j] * resize_factor;
                     }
                 }
+
+                let history_list = deleted.map((hist_point, index) =>
+                    <li key={index}>
+                        <button onClick={() => {
+                            deleted[index] = !deleted[index];
+                            this.setState({
+                                classes: json.classes,
+                                boxes: json.boxes,
+                                image_list: image_list,
+                                deleted: deleted,
+                                history_list: history_list,
+                                task_id: task.id,
+                                image: image,
+                                user_input: []
+                            })
+                        }}>{index}
+                        </button>
+                    </li>
+                );
+
                 this.setState({
                     classes: json.classes,
                     boxes: json.boxes,
-                })
+                    image_list: image_list,
+                    deleted: deleted,
+                    history_list: history_list,
+                    history_counter: 0,
+                    task_id: task.id,
+                    image: image,
+                    user_input: []
+                });
             });
-        let prevState = this.state;
-
-        this.setState({
-            classes: prevState.classes,
-            boxes: prevState.boxes,
-            image_list: image_list,
-            task_id: task.id,
-            image: image,
-            user_input: []
-        });
     }
 
     componentWillUnmount() {
         console.log("Component will unmount");
         if (this.state.classes.length !== 0) {
-            let url = "/api/save_labels/" + this.state.task_id + "/";
-            let method = "POST";
-            let resize_factor = compute_resize_factor(this.state.image.width, this.state.image.height);
+
+            //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
+            let classes = this.state.classes;
+            for (let i = 0; i < this.state.boxes.length; i++) {
+                if (this.state.deleted[i]) {
+                    boxes.splice(i, 1);
+                    classes.splice(i, 1);
+                    i--; //decrement counter as future elements will be moved one index to the left
+                }
+            }
+
+            //transform coordinates back to image size
+            let resize_factor = compute_resize_factor(this.state.image.width, this.state.image.height);
             for (let i = 0; i < boxes.length; i++) {
                 for (let j = 0; j < boxes[i].length; j++) {
                     boxes[i][j] = boxes[i][j] / resize_factor;
                 }
             }
-            let postData = JSON.stringify({"classes": this.state.classes, "boxes": boxes});
-            let shouldBeAsync = true;
+
+            let postData = JSON.stringify({"classes": classes, "boxes": boxes});
             let request = new XMLHttpRequest();
-            request.open(method, url, shouldBeAsync);
+            let url = "/api/save_labels/" + this.state.task_id + "/";
+            let shouldBeAsync = true;
+            request.open("POST", url, shouldBeAsync);
             request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
             request.send(postData);
             this.props.update_store();
@@ -111,38 +143,43 @@ class LabelInterface extends React.Component {
     }
 
     render_image() {
-        let img_width = this.state.image.width;
-        let img_height = this.state.image.height;
-        let resize_factor = compute_resize_factor(img_width, img_height);
-        let new_width = img_width * resize_factor;
-        let new_height = img_height * resize_factor;
+        try {
+            let img_width = this.state.image.width;
+            let img_height = this.state.image.height;
+            let resize_factor = compute_resize_factor(img_width, img_height);
+            let new_width = img_width * resize_factor;
+            let new_height = img_height * resize_factor;
 
-        const ctx = this.canvasRev.current.getContext('2d');
-        ctx.drawImage(this.state.image, 10, 10, new_width, new_height);
-        ctx.beginPath();
-        ctx.lineWidth = 3;
-        ctx.font = "20px Arial";
-        ctx.fillStyle = "red";
-        ctx.strokeStyle = "red";
+            const ctx = this.canvasRev.current.getContext('2d');
+            ctx.drawImage(this.state.image, 10, 10, new_width, new_height);
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "red";
+            ctx.strokeStyle = "red";
 
-        //show existing user input via points, add border size of 10 to each point
-        let ui = this.state.user_input;
-        for (let i = 0; i < (ui.length / 2); i++) {
-            ctx.rect(ui[0] + 10, ui[1] + 10, 1, 1);
-            ctx.rect(ui[2] + 10, ui[3] + 10, 1, 1);
-            ctx.rect(ui[4] + 10, ui[5] + 10, 1, 1);
-            ctx.rect(ui[6] + 10, ui[7] + 10, 1, 1);
+            //show existing user input via points, add border size of 10 to each point
+            let ui = this.state.user_input;
+            for (let i = 0; i < (ui.length / 2); i++) {
+                ctx.rect(ui[0] + 10, ui[1] + 10, 1, 1);
+                ctx.rect(ui[2] + 10, ui[3] + 10, 1, 1);
+                ctx.rect(ui[4] + 10, ui[5] + 10, 1, 1);
+                ctx.rect(ui[6] + 10, ui[7] + 10, 1, 1);
+            }
+
+            //render finished and non-deleted bounding boxes
+            let b = this.state.boxes;
+            let c = this.state.classes;
+            let d = this.state.deleted;
+            for (let i = 0; i < b.length; i++) {
+                if (!d[i]) {
+                    ctx.fillText(c[i], b[i][0] + 15, b[i][1] + 30);
+                    ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
+                }
+            }
+            ctx.stroke();
         }
-
-        //render finished bounding boxes
-        let b = this.state.boxes;
-        let c = this.state.classes;
-        for (let i = 0; i < b.length; i++) {
-            ctx.fillText(c[i], b[i][0] + 15, b[i][1] + 30);
-            ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
-        }
-        ctx.stroke();
-
+        catch (e) {}
     }
 
     handle_click(event) {
@@ -186,11 +223,33 @@ class LabelInterface extends React.Component {
 
         prevState.boxes.push(new_box);
         prevState.classes.push(c);
+        prevState.deleted.push(false);
+
+        let history_list = prevState.deleted.map((hist_point, index) =>
+            <li key={index}>
+                <button onClick={() => {
+                    prevState.deleted[index] = !prevState.deleted[index];
+                    this.setState({
+                        classes: prevState.classes,
+                        boxes: prevState.boxes,
+                        image_list: prevState.image_list,
+                        deleted: prevState.deleted,
+                        history_list: history_list,
+                        task_id: prevState.task_id,
+                        image: prevState.image,
+                        user_input: []
+                    })
+                }}>{index}
+                </button>
+            </li>
+        );
 
         this.setState({
             classes: prevState.classes,
             boxes: prevState.boxes,
             image_list: prevState.image_list,
+            deleted: prevState.deleted,
+            history_list: history_list,
             task_id: prevState.task_id,
             image: prevState.image,
             user_input: []
@@ -204,19 +263,23 @@ class LabelInterface extends React.Component {
             this.render_image();
         }
         let image_list = this.state.image_list;
+        let history_list = this.state.history_list;
         let index = get_index_for_image(image_list, this.state.task_id);
         return ([
             <div key="1" className="filenav">
                 <ul>{image_list}</ul>
             </div>,
-            <h1 key="2"> Label Image</h1>,
-            <em key="3" className="alignleft">
+            <div key="2" className="historynav">
+                <ul>{history_list}</ul>
+            </div>,
+            <h1 key="3"> Label Image</h1>,
+            <em key="4" className="alignleft">
                 {image_list[index - 1]}
             </em>,
-            <em key="4" className="alignright">
+            <em key="5" className="alignright">
                 {image_list[index + 1]}
             </em>,
-            <canvas key="5" ref={this.canvasRev} width="1200" height="800"
+            <canvas key="6" ref={this.canvasRev} width="1200" height="800"
                     onClick={this.handle_click}/>
         ])
     }

@@ -156,20 +156,19 @@ def save_labels(img_id):
     classes = data['classes']
     boxes = data['boxes']
 
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    path = os.path.join(
+        current_app.instance_path,
+        current_app.config['IMAGE_DIR'],
+        img_task.batch.dirname,
+        current_app.config['IMAGE_LABEL_SUBDIR'],
+        img_task.filename
+    )
+    base = os.path.splitext(path)[0]
+    path = base + '.xml'
+
     if len(classes) != 0:
-        img_task = ImageTask.query.filter_by(id=img_id).first()
-
-        path = os.path.join(
-            current_app.instance_path,
-            current_app.config['IMAGE_DIR'],
-            img_task.batch.dirname,
-            current_app.config['IMAGE_LABEL_SUBDIR'],
-            img_task.filename
-        )
-
-        base = os.path.splitext(path)[0]
-        path = base + '.xml'
-
         root = ET.Element('annotation')
 
         for i, c in enumerate(classes):
@@ -188,5 +187,8 @@ def save_labels(img_id):
             f.write(pretty_str)
 
         db_update_task()
+
+    elif os.path.exists(path):
+        os.remove(path)
 
     return jsonify(success=True)
