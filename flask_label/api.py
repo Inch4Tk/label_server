@@ -120,10 +120,18 @@ def serve_labels(img_id):
 
     base = os.path.splitext(path)[0]
     path = base + '.xml'
+    width = 0
+    height = 0
 
     if os.path.exists(path):
         tree = ET.parse(path)
         root = tree.getroot()
+
+        for name in root.findall('./size/width'):
+            width = name.text
+
+        for name in root.findall('./size/height'):
+            height = name.text
 
         for name in root.findall('./object/name'):
             classes.append(name.text)
@@ -141,7 +149,7 @@ def serve_labels(img_id):
         for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
             boxes[i].append(int(ymax.text, 10))
 
-    return jsonify({'classes': classes, 'boxes': boxes})
+    return jsonify({'classes': classes, 'boxes': boxes, 'width': width, 'height': height})
 
 @bp.route('/save_labels/<int:img_id>/', methods=['POST'])
 @api_login_required
@@ -155,6 +163,8 @@ def save_labels(img_id):
     data = request.get_json()
     classes = data['classes']
     boxes = data['boxes']
+    width = data['width']
+    height = data['height']
 
     img_task = ImageTask.query.filter_by(id=img_id).first()
 
@@ -170,6 +180,10 @@ def save_labels(img_id):
 
     if len(classes) != 0:
         root = ET.Element('annotation')
+
+        size = ET.SubElement(root, 'size')
+        ET.SubElement(size, 'width').text = str(width)
+        ET.SubElement(size, 'height').text = str(height)
 
         for i, c in enumerate(classes):
             obj = ET.SubElement(root, 'object')

@@ -60,8 +60,8 @@ class LabelInterface extends React.Component {
             </li>
         );
         let image = this.load_image("/api/serve_image/" + task.id + "/");
-        let resize_factor = compute_resize_factor(image.width, image.height);
         let deleted = [];
+        let res_fac = undefined;
 
         fetch("/api/serve_labels/" + task.id + "/")
             .then(
@@ -69,6 +69,8 @@ class LabelInterface extends React.Component {
                 error => console.log('An error occurred.', error))
             .then(json => {
                 for (let i = 0; i < json.boxes.length; i++) {
+                    res_fac = compute_resize_factor(parseInt(json.width, 10),
+                                                    parseInt(json.height, 10));
                     deleted.push(false);
                     for (let j = 0; j < json.boxes[i].length; j++) {
                         json.boxes[i][j] = json.boxes[i][j] * res_fac;
@@ -134,13 +136,17 @@ class LabelInterface extends React.Component {
                     boxes[i][j] = boxes[i][j] / resize_factor;
                 }
             }
-
-            let postData = JSON.stringify({"classes": classes, "boxes": boxes});
+            let postData = JSON.stringify({
+                'classes': classes,
+                'boxes': boxes,
+                'width': this.state.image.width,
+                'height': this.state.image.height
+            });
             let request = new XMLHttpRequest();
-            let url = "/api/save_labels/" + this.state.task_id + "/";
+            let url = '/api/save_labels/' + this.state.task_id + '/';
             let shouldBeAsync = true;
-            request.open("POST", url, shouldBeAsync);
-            request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            request.open('POST', url, shouldBeAsync);
+            request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             request.send(postData);
             this.props.update_store();
         }
@@ -183,7 +189,8 @@ class LabelInterface extends React.Component {
             }
             ctx.stroke();
         }
-        catch (e) {}
+        catch (e) {
+        }
     }
 
     handle_click(event) {
