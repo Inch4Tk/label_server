@@ -42,7 +42,8 @@ class LabelInterface extends React.Component {
             deleted: [],
             history_list: -1,
             task_id: -1,
-            user_input: []
+            user_input: [],
+            has_changed: false
         };
         this.handle_click = this.handle_click.bind(this);
     }
@@ -89,7 +90,8 @@ class LabelInterface extends React.Component {
                                 history_list: history_list,
                                 task_id: task.id,
                                 image: image,
-                                user_input: []
+                                user_input: [],
+                                has_changed: true
                             })
                         }}>{index}
                         </button>
@@ -102,17 +104,17 @@ class LabelInterface extends React.Component {
                     image_list: image_list,
                     deleted: deleted,
                     history_list: history_list,
-                    history_counter: 0,
                     task_id: task.id,
                     image: image,
-                    user_input: []
+                    user_input: [],
+                    has_changed: false
                 });
             });
     }
 
     componentWillUnmount() {
         console.log("Component will unmount");
-        if (this.state.classes.length !== 0) {
+        if (this.state.has_changed) {
 
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
@@ -148,6 +150,7 @@ class LabelInterface extends React.Component {
             request.open('POST', url, shouldBeAsync);
             request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             request.send(postData);
+
             this.props.update_store();
         }
     }
@@ -248,7 +251,8 @@ class LabelInterface extends React.Component {
                         history_list: history_list,
                         task_id: prevState.task_id,
                         image: prevState.image,
-                        user_input: []
+                        user_input: [],
+                        has_changed: true
                     })
                 }}>{index}
                 </button>
@@ -263,7 +267,8 @@ class LabelInterface extends React.Component {
             history_list: history_list,
             task_id: prevState.task_id,
             image: prevState.image,
-            user_input: []
+            user_input: [],
+            has_changed: true
         });
     }
 
