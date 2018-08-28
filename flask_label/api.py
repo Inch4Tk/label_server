@@ -200,9 +200,9 @@ def save_labels(img_id):
         with open(path, 'w') as f:
             f.write(pretty_str)
 
-        db_update_task()
-
     elif os.path.exists(path):
         os.remove(path)
+
+    db_update_task()
 
     return jsonify(success=True)
