@@ -329,9 +329,11 @@ class LabelInterface extends React.Component {
 
         let c = prompt("Please enter the class of your label");
 
-        prevState.boxes.push(new_box);
-        prevState.classes.push(c);
-        prevState.deleted.push(false);
+        if (c) {
+            prevState.boxes.push(new_box);
+            prevState.classes.push(c);
+            prevState.deleted.push(false);
+        }
 
         this.setState({
             classes: prevState.classes,
