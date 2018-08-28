@@ -1,5 +1,6 @@
 import React from "react";
 import {Link} from "react-router-dom"
+import {Redirect} from "react-router";
 
 function render_filename(task, current_task) {
     if (task === current_task) {
@@ -34,6 +35,7 @@ function compute_resize_factor(img_width, img_height) {
 class LabelInterface extends React.Component {
     constructor(props) {
         super(props);
+        this.mouse_position = undefined;
         this.canvasRev = React.createRef();
         this.state = {
             classes: [],
@@ -41,14 +43,19 @@ class LabelInterface extends React.Component {
             deleted: [],
             task_id: -1,
             user_input: [],
-            has_changed: false
+            has_changed: false,
+            redirect: undefined,
         };
         this.handle_click = this.handle_click.bind(this);
+        this.track_mouse_position = this.track_mouse_position.bind(this);
+        this.handle_keypress = this.handle_keypress.bind(this);
     }
 
     componentDidMount() {
         console.log("Component did mount");
         this.props.update_store();
+        document.addEventListener('keydown', this.handle_keypress);
+
         let {task} = this.props;
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
@@ -74,14 +81,16 @@ class LabelInterface extends React.Component {
                     deleted: deleted,
                     task_id: task.id,
                     image: image,
-                    user_input: [],
-                    has_changed: false
+                    user_input: [undefined, undefined, undefined, undefined],
+                    has_changed: false,
+                    redirect: undefined,
                 });
             });
     }
 
     componentWillUnmount() {
         console.log("Component will unmount");
+        document.removeEventListener('keydown', this.handle_keypress);
         if (this.state.has_changed) {
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
@@ -120,6 +129,142 @@ class LabelInterface extends React.Component {
         }
     }
 
+    handle_click(event) {
+        let ui = this.state.user_input;
+        let img_width = this.state.image.width;
+        let img_height = this.state.image.height;
+        let resize_factor = compute_resize_factor(img_width, img_height);
+        let new_width = img_width * resize_factor;
+        let new_height = img_height * resize_factor;
+        let bounds = this.canvasRev.current.getBoundingClientRect();
+        //handle clicks on border and map input to image coordinates
+        let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
+        let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
+
+        for (let i = 0; i < ui.length; i++) {
+            if (!ui[i]) {
+                ui.push(x, y);
+            }
+        }
+
+        if (ui[0] && ui[1] && ui[2] && ui[3]) {
+            this.add_new_bounding_box()
+        }
+    }
+
+    track_mouse_position(event) {
+        try {
+            let prevState = this.state;
+            let img_width = prevState.image.width;
+            let img_height = prevState.image.height;
+            let resize_factor = compute_resize_factor(img_width, img_height);
+            let new_width = img_width * resize_factor;
+            let new_height = img_height * resize_factor;
+            let bounds = this.canvasRev.current.getBoundingClientRect();
+            let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
+            let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
+
+            this.mouse_position = {x: x, y: y};
+        }
+        catch (e) {
+        }
+    }
+
+    handle_keypress(key) {
+        let kc = key.keyCode;
+        let {task, batch} = this.props;
+        let task_ids = batch.tasks.map((t) => t.id);
+        let prevState = this.state;
+
+        //Q: backwards
+        if (kc === 81 && task_ids.includes(task.id - 1)) {
+            this.setState({
+                classes: prevState.classes,
+                boxes: prevState.boxes,
+                image_list: prevState.image_list,
+                deleted: prevState.deleted,
+                task_id: prevState.task_id,
+                image: prevState.image,
+                user_input: prevState.user_input,
+                has_changed: prevState.has_changed,
+                redirect: "/label_images/" + batch.id + "/" + (task.id - 1),
+            });
+        }
+
+        //E: forwards
+        if (kc === 69 && task_ids.includes(task.id + 1)) {
+            this.setState({
+                classes: prevState.classes,
+                boxes: prevState.boxes,
+                image_list: prevState.image_list,
+                deleted: prevState.deleted,
+                task_id: prevState.task_id,
+                image: prevState.image,
+                user_input: prevState.user_input,
+                has_changed: prevState.has_changed,
+                redirect: "/label_images/" + batch.id + "/" + (task.id + 1)
+            });
+        }
+
+        //WASD: points of extreme clicking
+        if ([65, 68, 83, 87].includes(kc)) {
+            let mp = this.mouse_position;
+            let ui = prevState.user_input;
+            //W 1st point of extreme clicking
+            if (kc === 87) {
+                ui[0] = [mp.x, mp.y]
+            }
+            //A: 2nd point of extreme clicking
+            else if (kc === 65) {
+                ui[1] = [mp.x, mp.y]
+            }
+            //S: 3rd point of extreme clicking
+            else if (kc === 83) {
+                ui[2] = [mp.x, mp.y]
+            }
+            //D: 4th point of extreme clicking
+            else if (kc === 68) {
+                ui[3] = [mp.x, mp.y]
+            }
+
+            if (ui[0] && ui[1] && ui[2] && ui[3]) {
+                this.add_new_bounding_box()
+            }
+
+            else {
+                this.setState({
+                    classes: prevState.classes,
+                    boxes: prevState.boxes,
+                    image_list: prevState.image_list,
+                    deleted: prevState.deleted,
+                    task_id: prevState.task_id,
+                    image: prevState.image,
+                    user_input: ui,
+                    has_changed: prevState.has_changed,
+                    redirect: prevState.redirect
+                })
+            }
+        }
+
+        //numbers for deleting / adding bounding box with this index
+        if (kc > 48 && kc < 58 && prevState.classes.length >= (kc - 48)) {
+            prevState.deleted[kc - 49] = !prevState.deleted[kc - 49];
+
+            this.setState({
+                classes: prevState.classes,
+                boxes: prevState.boxes,
+                image_list: prevState.image_list,
+                deleted: prevState.deleted,
+                task_id: prevState.task_id,
+                image: prevState.image,
+                user_input: prevState.user_input,
+                has_changed: prevState.has_changed,
+                redirect: prevState.redirect
+            })
+        }
+
+    }
+
     render_image() {
         try {
             let img_width = this.state.image.width;
@@ -141,11 +286,10 @@ class LabelInterface extends React.Component {
             ctx.fillStyle = colors[c.length % colors.length];
             ctx.strokeStyle = colors[c.length % colors.length];
             ctx.lineWidth = 5;
-            for (let i = 0; i < (ui.length / 2); i++) {
-                ctx.rect(ui[0] + 10, ui[1] + 10, 1, 1);
-                ctx.rect(ui[2] + 10, ui[3] + 10, 1, 1);
-                ctx.rect(ui[4] + 10, ui[5] + 10, 1, 1);
-                ctx.rect(ui[6] + 10, ui[7] + 10, 1, 1);
+            for (let i = 0; i < ui.length; i++) {
+                if (ui[i]) {
+                    ctx.rect(ui[i][0] + 10, ui[i][1] + 10, 1, 1);
+                }
             }
             ctx.stroke();
 
@@ -156,7 +300,7 @@ class LabelInterface extends React.Component {
                 ctx.fillStyle = colors[i % colors.length];
                 ctx.strokeStyle = colors[i % colors.length];
                 if (!d[i]) {
-                    ctx.fillText(i + ': ' + c[i], b[i][0] + 15, b[i][1] + 30);
+                    ctx.fillText((i + 1) + ': ' + c[i], b[i][0] + 15, b[i][1] + 30);
                     ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
                     ctx.stroke();
                 }
@@ -164,26 +308,6 @@ class LabelInterface extends React.Component {
         }
         catch (e) {
         }
-    }
-
-    handle_click(event) {
-        let img_width = this.state.image.width;
-        let img_height = this.state.image.height;
-        let resize_factor = compute_resize_factor(img_width, img_height);
-        let new_width = img_width * resize_factor;
-        let new_height = img_height * resize_factor;
-        let bounds = this.canvasRev.current.getBoundingClientRect();
-        //handle clicks on border and map input to image coordinates
-        let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
-        let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
-
-        this.state.user_input.push(x, y);
-
-        if (this.state.user_input.length === 8) {
-            this.add_new_bounding_box()
-        }
-        this.render_image()
-
     }
 
     load_image(url) {
@@ -196,10 +320,10 @@ class LabelInterface extends React.Component {
     add_new_bounding_box() {
         let prevState = this.state;
         let ui = this.state.user_input;
-        let x_min = Math.min(ui[0], ui[2], ui[4], ui[6]);
-        let x_max = Math.max(ui[0], ui[2], ui[4], ui[6]);
-        let y_min = Math.min(ui[1], ui[3], ui[5], ui[7]);
-        let y_max = Math.max(ui[1], ui[3], ui[5], ui[7]);
+        let x_min = Math.min(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
+        let x_max = Math.max(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
+        let y_min = Math.min(ui[0][1], ui[1][1], ui[2][1], ui[3][1]);
+        let y_max = Math.max(ui[0][1], ui[1][1], ui[2][1], ui[3][1]);
 
         let new_box = [x_min, y_min, x_max, y_max];
 
@@ -216,15 +340,19 @@ class LabelInterface extends React.Component {
             deleted: prevState.deleted,
             task_id: prevState.task_id,
             image: prevState.image,
-            user_input: [],
-            has_changed: true
+            user_input: [undefined, undefined, undefined, undefined],
+            has_changed: true,
+            redirect: undefined,
         });
     }
 
     render() {
+        if (this.state.redirect) {
+            return <Redirect push to={this.state.redirect}/>;
+        }
         console.log("rendering");
         let state = this.state;
-        let {current_task, batch} = this.props;
+        let {task, batch} = this.props;
         console.log(state);
 
         if (state.image) {
@@ -232,10 +360,10 @@ class LabelInterface extends React.Component {
 
         }
         let tasks = batch.tasks;
-        let image_list = tasks.map((task) =>
-            <li key={task.id}>
-                <Link to={"/label_images/" + batch.id + "/" + task.id}>
-                    {render_filename(task, current_task)}
+        let image_list = tasks.map((t) =>
+            <li key={t.id}>
+                <Link to={"/label_images/" + batch.id + "/" + t.id}>
+                    {render_filename(t, task)}
                 </Link>
             </li>
         );
@@ -251,9 +379,10 @@ class LabelInterface extends React.Component {
                         task_id: state.task_id,
                         image: state.image,
                         user_input: state.user_input,
-                        has_changed: true
+                        has_changed: true,
+                        redirect: undefined,
                     })
-                }}>{(is_deleted ? 'add ' : 'remove ') + index + ': ' + state.classes[index]}
+                }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
                 </button>
             </li>
         );
@@ -274,7 +403,7 @@ class LabelInterface extends React.Component {
                 {image_list[index + 1]}
             </em>,
             <canvas key="6" ref={this.canvasRev} width="1200" height="800"
-                    onClick={this.handle_click}/>
+                    onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
         ])
     }
 }

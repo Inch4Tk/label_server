@@ -1,9 +1,6 @@
 import os
-import sys
 
-import logging
 from flask import Flask
-
 
 def create_app(app_config=None):
     """App-factory function, which initializes our flask application."""
@@ -17,11 +14,11 @@ def create_app(app_config=None):
         app_config = config.Dev(app.instance_path)
         app.logger.warning("THIS APP IS IN DEBUG MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.")
 
-    app.config.from_object(app_config) # Object base configuration
+    app.config.from_object(app_config)  # Object base configuration
 
     if app_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True) # instance-folders configuration
+        app.config.from_pyfile('config.py', silent=True)  # instance-folders configuration
 
     # Ensure the instance folder exists
     try:
@@ -48,9 +45,5 @@ def create_app(app_config=None):
     from . import index
     app.register_blueprint(index.bp)
     app.add_url_rule("/", endpoint="index.index")
-
-    from . import label_images
-    app.register_blueprint(label_images.bp)
-
 
     return app
