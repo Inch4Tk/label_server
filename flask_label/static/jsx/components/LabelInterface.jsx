@@ -174,6 +174,9 @@ class LabelInterface extends React.Component {
         let kc = key.keyCode;
         let {task, batch} = this.props;
         let task_ids = batch.tasks.map((t) => t.id);
+
+        let open_tasks_ids = batch.tasks.filter(
+            (t) => !t.is_labeled && t.id !== task.id).map((t) => t.id);
         let prevState = this.state;
 
         //Q: backwards
@@ -207,7 +210,7 @@ class LabelInterface extends React.Component {
         }
 
         //WASD: points of extreme clicking
-        if ([65, 68, 83, 87].includes(kc)) {
+        else if ([65, 68, 83, 87].includes(kc)) {
             let mp = this.mouse_position;
             let ui = prevState.user_input;
             //W 1st point of extreme clicking
@@ -245,6 +248,23 @@ class LabelInterface extends React.Component {
                 })
             }
         }
+
+        //R: jump to random, unlabeled task from current batch
+        else if (kc === 82) {
+            let new_task_id = open_tasks_ids[Math.floor(Math.random() * open_tasks_ids.length)];
+            this.setState({
+                classes: prevState.classes,
+                boxes: prevState.boxes,
+                image_list: prevState.image_list,
+                deleted: prevState.deleted,
+                task_id: prevState.task_id,
+                image: prevState.image,
+                user_input: prevState.user_input,
+                has_changed: prevState.has_changed,
+                redirect: "/label_images/" + batch.id + "/" + new_task_id,
+            });
+        }
+
 
         //numbers for deleting / adding bounding box with this index
         if (kc > 48 && kc < 58 && prevState.classes.length >= (kc - 48)) {
