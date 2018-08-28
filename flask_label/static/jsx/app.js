@@ -34,13 +34,13 @@ const routes = [
         main: () => (<BatchOverviewApp />)
     },
     {
-        path: "/image_batch",
+        path: "/label_images",
         exact: true,
         navDynamic: [],
         main: () => (<Redirect to="/" />)
     },
     {
-        path: "/image_batch/:batch_id",
+        path: "/label_images/:batch_id",
         exact: true,
         navDynamic: [{ link: "/todo", name: "settings" }, { link: "/todo", name: "instructions" }],
         main: (props) => (<ImageBatchDetailApp {...props}/>)
@@ -57,7 +57,7 @@ const routes = [
         navDynamic: [{ link: "/todo", name: "anotherdyntestlink" }],
         main: () => (<h1>TODO</h1>)
     }
-]
+];
 
 // Initialize the app
 const App = () => (
@@ -78,10 +78,10 @@ const App = () => (
             <Route component={NoMatch}/>
         </Switch>
     </div>
-)
+);
 
 // Put the SPA to the document root
-var doc_root = document.getElementById("react-root");
+let doc_root = document.getElementById("react-root");
 ReactDOM.render(
     <Provider store={store}>
         <Router>
