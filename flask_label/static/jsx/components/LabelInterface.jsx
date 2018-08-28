@@ -38,9 +38,7 @@ class LabelInterface extends React.Component {
         this.state = {
             classes: [],
             boxes: [],
-            image_list: -1,
             deleted: [],
-            history_list: -1,
             task_id: -1,
             user_input: [],
             has_changed: false
@@ -50,16 +48,8 @@ class LabelInterface extends React.Component {
 
     componentDidMount() {
         console.log("Component did mount");
-        const {task, batch} = this.props;
-        let current_task = task;
-        const tasks = batch.tasks;
-        let image_list = tasks.map((task) =>
-            <li key={task.id}>
-                <Link to={"/label_images/" + batch.id + "/" + task.id}>
-                    {render_filename(task, current_task)}
-                </Link>
-            </li>
-        );
+        this.props.update_store();
+        let {task} = this.props;
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
         let res_fac = undefined;
@@ -71,39 +61,17 @@ class LabelInterface extends React.Component {
             .then(json => {
                 for (let i = 0; i < json.boxes.length; i++) {
                     res_fac = compute_resize_factor(parseInt(json.width, 10),
-                                                    parseInt(json.height, 10));
+                        parseInt(json.height, 10));
                     deleted.push(false);
                     for (let j = 0; j < json.boxes[i].length; j++) {
                         json.boxes[i][j] = json.boxes[i][j] * res_fac;
                     }
                 }
 
-                let history_list = deleted.map((hist_point, index) =>
-                    <li key={index}>
-                        <button onClick={() => {
-                            deleted[index] = !deleted[index];
-                            this.setState({
-                                classes: json.classes,
-                                boxes: json.boxes,
-                                image_list: image_list,
-                                deleted: deleted,
-                                history_list: history_list,
-                                task_id: task.id,
-                                image: image,
-                                user_input: [],
-                                has_changed: true
-                            })
-                        }}>{index}
-                        </button>
-                    </li>
-                );
-
                 this.setState({
                     classes: json.classes,
                     boxes: json.boxes,
-                    image_list: image_list,
                     deleted: deleted,
-                    history_list: history_list,
                     task_id: task.id,
                     image: image,
                     user_input: [],
@@ -115,7 +83,6 @@ class LabelInterface extends React.Component {
     componentWillUnmount() {
         console.log("Component will unmount");
         if (this.state.has_changed) {
-
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
             let classes = this.state.classes;
@@ -150,8 +117,6 @@ class LabelInterface extends React.Component {
             request.open('POST', url, shouldBeAsync);
             request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             request.send(postData);
-
-            this.props.update_store();
         }
     }
 
@@ -239,32 +204,11 @@ class LabelInterface extends React.Component {
         prevState.classes.push(c);
         prevState.deleted.push(false);
 
-        let history_list = prevState.deleted.map((hist_point, index) =>
-            <li key={index}>
-                <button onClick={() => {
-                    prevState.deleted[index] = !prevState.deleted[index];
-                    this.setState({
-                        classes: prevState.classes,
-                        boxes: prevState.boxes,
-                        image_list: prevState.image_list,
-                        deleted: prevState.deleted,
-                        history_list: history_list,
-                        task_id: prevState.task_id,
-                        image: prevState.image,
-                        user_input: [],
-                        has_changed: true
-                    })
-                }}>{index}
-                </button>
-            </li>
-        );
-
         this.setState({
             classes: prevState.classes,
             boxes: prevState.boxes,
             image_list: prevState.image_list,
             deleted: prevState.deleted,
-            history_list: history_list,
             task_id: prevState.task_id,
             image: prevState.image,
             user_input: [],
@@ -274,13 +218,42 @@ class LabelInterface extends React.Component {
 
     render() {
         console.log("rendering");
-        console.log(this.state);
-        if (this.state.image) {
+        let state = this.state;
+        let {current_task, batch} = this.props;
+        console.log(state);
+
+        if (state.image) {
             this.render_image();
+
         }
-        let image_list = this.state.image_list;
-        let history_list = this.state.history_list;
-        let index = get_index_for_image(image_list, this.state.task_id);
+        let tasks = batch.tasks;
+        let image_list = tasks.map((task) =>
+            <li key={task.id}>
+                <Link to={"/label_images/" + batch.id + "/" + task.id}>
+                    {render_filename(task, current_task)}
+                </Link>
+            </li>
+        );
+
+        let history_list = state.deleted.map((is_deleted, index) =>
+            <li key={index}>
+                <button onClick={() => {
+                    state.deleted[index] = !state.deleted[index];
+                    this.setState({
+                        classes: state.classes,
+                        boxes: state.boxes,
+                        deleted: state.deleted,
+                        task_id: state.task_id,
+                        image: state.image,
+                        user_input: state.user_input,
+                        has_changed: true
+                    })
+                }}>{index + ': ' + (is_deleted ? 'add ' : 'remove ') + state.classes[index]}
+                </button>
+            </li>
+        );
+
+        let index = get_index_for_image(image_list, state.task_id);
         return ([
             <div key="1" className="filenav">
                 <ul>{image_list}</ul>
