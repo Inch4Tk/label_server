@@ -124,38 +124,43 @@ class LabelInterface extends React.Component {
         try {
             let img_width = this.state.image.width;
             let img_height = this.state.image.height;
+            let b = this.state.boxes;
+            let c = this.state.classes;
+            let d = this.state.deleted;
             let resize_factor = compute_resize_factor(img_width, img_height);
             let new_width = img_width * resize_factor;
             let new_height = img_height * resize_factor;
-
+            let colors = ['red', 'blue', 'orange', 'purple', 'brown', 'turquoise'];
             const ctx = this.canvasRev.current.getContext('2d');
             ctx.drawImage(this.state.image, 10, 10, new_width, new_height);
-            ctx.beginPath();
-            ctx.lineWidth = 3;
             ctx.font = "20px Arial";
-            ctx.fillStyle = "red";
-            ctx.strokeStyle = "red";
 
             //show existing user input via points, add border size of 10 to each point
             let ui = this.state.user_input;
+            ctx.beginPath();
+            ctx.fillStyle = colors[c.length % colors.length];
+            ctx.strokeStyle = colors[c.length % colors.length];
+            ctx.lineWidth = 5;
             for (let i = 0; i < (ui.length / 2); i++) {
                 ctx.rect(ui[0] + 10, ui[1] + 10, 1, 1);
                 ctx.rect(ui[2] + 10, ui[3] + 10, 1, 1);
                 ctx.rect(ui[4] + 10, ui[5] + 10, 1, 1);
                 ctx.rect(ui[6] + 10, ui[7] + 10, 1, 1);
             }
+            ctx.stroke();
 
             //render finished and non-deleted bounding boxes
-            let b = this.state.boxes;
-            let c = this.state.classes;
-            let d = this.state.deleted;
             for (let i = 0; i < b.length; i++) {
+                ctx.beginPath();
+                ctx.lineWidth = 3;
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.strokeStyle = colors[i % colors.length];
                 if (!d[i]) {
-                    ctx.fillText(c[i], b[i][0] + 15, b[i][1] + 30);
+                    ctx.fillText(i + ': ' + c[i], b[i][0] + 15, b[i][1] + 30);
                     ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
+                    ctx.stroke();
                 }
             }
-            ctx.stroke();
         }
         catch (e) {
         }
@@ -248,7 +253,7 @@ class LabelInterface extends React.Component {
                         user_input: state.user_input,
                         has_changed: true
                     })
-                }}>{index + ': ' + (is_deleted ? 'add ' : 'remove ') + state.classes[index]}
+                }}>{(is_deleted ? 'add ' : 'remove ') + index + ': ' + state.classes[index]}
                 </button>
             </li>
         );
