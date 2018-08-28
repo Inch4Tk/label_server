@@ -130,6 +130,7 @@ class LabelInterface extends React.Component {
     }
 
     handle_click(event) {
+        let prevState = this.state;
         let ui = this.state.user_input;
         let img_width = this.state.image.width;
         let img_height = this.state.image.height;
@@ -143,10 +144,21 @@ class LabelInterface extends React.Component {
 
         for (let i = 0; i < ui.length; i++) {
             if (!ui[i]) {
-                ui.push(x, y);
+                ui[i] = [x, y];
+                this.setState({
+                    classes: prevState.classes,
+                    boxes: prevState.boxes,
+                    image_list: prevState.image_list,
+                    deleted: prevState.deleted,
+                    task_id: prevState.task_id,
+                    image: prevState.image,
+                    user_input: ui,
+                    has_changed: prevState.has_changed,
+                    redirect: prevState.redirect
+                });
+                break;
             }
         }
-
         if (ui[0] && ui[1] && ui[2] && ui[3]) {
             this.add_new_bounding_box()
         }
@@ -266,7 +278,7 @@ class LabelInterface extends React.Component {
         }
 
 
-        //numbers for deleting / adding bounding box with this index
+        //numbers for deleting / re-adding bounding box with this index
         if (kc > 48 && kc < 58 && prevState.classes.length >= (kc - 48)) {
             prevState.deleted[kc - 49] = !prevState.deleted[kc - 49];
 
@@ -278,7 +290,7 @@ class LabelInterface extends React.Component {
                 task_id: prevState.task_id,
                 image: prevState.image,
                 user_input: prevState.user_input,
-                has_changed: prevState.has_changed,
+                has_changed: true,
                 redirect: prevState.redirect
             })
         }
