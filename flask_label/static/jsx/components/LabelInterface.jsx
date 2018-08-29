@@ -44,6 +44,7 @@ class LabelInterface extends React.Component {
         this.mouse_position = undefined;
         this.has_changed = false;
         this.task_id = -1;
+        this.image = -1;
         this.canvasRev = React.createRef();
         this.state = {
             classes: [],
@@ -51,7 +52,7 @@ class LabelInterface extends React.Component {
             deleted: [],
             user_input: [],
             predictions: [],
-            instruction: [],
+            instructions: [],
             redirect: undefined,
         };
         this.handle_click = this.handle_click.bind(this);
@@ -96,14 +97,14 @@ class LabelInterface extends React.Component {
                         else {
                             instruction = ['Annotate any object you see below.'];
                         }
+                        this.image = image;
                         this.setState({
                             classes: json.classes,
                             boxes: json.boxes,
                             deleted: deleted,
-                            image: image,
                             user_input: [undefined, undefined, undefined, undefined],
                             predictions: pred,
-                            instruction: instruction,
+                            instructions: instruction,
                             redirect: undefined,
                         });
                     });
@@ -130,7 +131,7 @@ class LabelInterface extends React.Component {
             }
 
             //transform coordinates back to image size
-            let resize_factor = compute_resize_factor(this.state.image.width, this.state.image.height);
+            let resize_factor = compute_resize_factor(this.image.width, this.image.height);
             for (let i = 0; i < boxes.length; i++) {
                 for (let j = 0; j < boxes[i].length; j++) {
                     boxes[i][j] = boxes[i][j] / resize_factor;
@@ -139,8 +140,8 @@ class LabelInterface extends React.Component {
             let postData = JSON.stringify({
                 'classes': classes,
                 'boxes': boxes,
-                'width': this.state.image.width,
-                'height': this.state.image.height
+                'width': this.image.width,
+                'height': this.image.height
             });
             let request = new XMLHttpRequest();
             let url = '/api/save_labels/' + this.task_id + '/';
@@ -154,8 +155,8 @@ class LabelInterface extends React.Component {
     handle_click(event) {
         let newState = this.state;
         let ui = this.state.user_input;
-        let img_width = this.state.image.width;
-        let img_height = this.state.image.height;
+        let img_width = this.image.width;
+        let img_height = this.image.height;
         let resize_factor = compute_resize_factor(img_width, img_height);
         let new_width = img_width * resize_factor;
         let new_height = img_height * resize_factor;
@@ -170,12 +171,10 @@ class LabelInterface extends React.Component {
                 this.setState({
                     classes: newState.classes,
                     boxes: newState.boxes,
-                    image_list: newState.image_list,
                     deleted: newState.deleted,
-                    image: newState.image,
                     user_input: ui,
                     predictions: newState.predictions,
-                    instruction: newState.instruction,
+                    instructions: newState.instructions,
                     redirect: newState.redirect
                 });
                 break;
@@ -188,8 +187,8 @@ class LabelInterface extends React.Component {
 
     track_mouse_position(event) {
         try {
-            let img_width = this.state.image.width;
-            let img_height = this.state.image.height;
+            let img_width = this.image.width;
+            let img_height = this.image.height;
             let resize_factor = compute_resize_factor(img_width, img_height);
             let new_width = img_width * resize_factor;
             let new_height = img_height * resize_factor;
@@ -270,8 +269,8 @@ class LabelInterface extends React.Component {
             //V: verify a proposal
             else if (kc === 86) {
                 let pred = newState.predictions.splice(0, 1)[0];
-                let width = this.state.image.width;
-                let height = this.state.image.height;
+                let width = this.image.width;
+                let height = this.image.height;
                 let res_fac = compute_resize_factor(width, height);
                 //convert to absolute coordinates
                 pred['XMin'] = pred['XMin'] * width * res_fac;
@@ -283,10 +282,10 @@ class LabelInterface extends React.Component {
                 newState.deleted.push(false)
             }
             if (newState.predictions.length > 0) {
-                newState.instruction = get_instruction_for_prediction(newState.predictions[0])
+                newState.instructions = get_instruction_for_prediction(newState.predictions[0])
             }
             else {
-                newState.instruction = ['Annotate any object you see below.'];
+                newState.instructions = ['Annotate any object you see below.'];
             }
         }
 
@@ -294,20 +293,18 @@ class LabelInterface extends React.Component {
         this.setState({
             classes: newState.classes,
             boxes: newState.boxes,
-            image_list: newState.image_list,
             deleted: newState.deleted,
-            image: newState.image,
             user_input: newState.user_input,
             predictions: newState.predictions,
-            instruction: newState.instruction,
+            instructions: newState.instructions,
             redirect: newState.redirect
         })
     }
 
     render_image() {
         try {
-            let img_width = this.state.image.width;
-            let img_height = this.state.image.height;
+            let img_width = this.image.width;
+            let img_height = this.image.height;
             let b = this.state.boxes;
             let c = this.state.classes;
             let d = this.state.deleted;
@@ -316,7 +313,7 @@ class LabelInterface extends React.Component {
             let new_height = img_height * resize_factor;
             let colors = ['red', 'blue', 'orange', 'purple', 'brown', 'turquoise'];
             const ctx = this.canvasRev.current.getContext('2d');
-            ctx.drawImage(this.state.image, 10, 10, new_width, new_height);
+            ctx.drawImage(this.image, 10, 10, new_width, new_height);
             ctx.font = "20px Arial";
 
             //show existing user input via points, add border size of 10 to each point
@@ -378,11 +375,10 @@ class LabelInterface extends React.Component {
         this.setState({
             classes: newState.classes,
             boxes: newState.boxes,
-            image_list: newState.image_list,
             deleted: newState.deleted,
-            image: newState.image,
             user_input: [undefined, undefined, undefined, undefined],
             predictions: newState.predictions,
+            instructions: newState.instructions,
             redirect: undefined,
         });
     }
@@ -396,7 +392,7 @@ class LabelInterface extends React.Component {
         let {task, batch} = this.props;
         console.log(state);
 
-        if (state.image) {
+        if (this.image) {
             this.render_image();
 
         }
@@ -418,10 +414,9 @@ class LabelInterface extends React.Component {
                         classes: state.classes,
                         boxes: state.boxes,
                         deleted: state.deleted,
-                        image: state.image,
                         user_input: state.user_input,
                         predictions: state.predictions,
-                        instruction: state.instruction,
+                        instructions: state.instructions,
                         redirect: undefined,
                     })
                 }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
@@ -429,7 +424,7 @@ class LabelInterface extends React.Component {
             </li>
         );
 
-        let instruction_list = state.instruction.map((instruction, index) =>
+        let instruction_list = state.instructions.map((instruction, index) =>
             <li key={index}>
                 <b>{instruction}</b>
             </li>
