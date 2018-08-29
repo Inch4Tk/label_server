@@ -22,20 +22,20 @@ function compute_resize_factor(img_width, img_height) {
     return Math.min(resize_factor_width, resize_factor_height);
 }
 
-function get_message_for_prediction(prediction) {
+function get_instruction_for_prediction(prediction) {
     //Create a message that gets displayed to a user when a prediction from the neural networks
     //is available.
     let cls = prediction['LabelName'];
     let action = (prediction['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
-    let messages = [];
-    messages.push('Please ' + action + cls + ' you see in this picture.');
+    let instructions = [];
+    instructions.push('Please ' + action + cls + ' you see in this picture.');
     if (action === 'verify the ') {
-        messages.push('Press "v" to verify or "f" to falsify.');
+        instructions.push('Press "v" to verify or "f" to falsify.');
     }
     else {
-        messages.push('If there is no ' + cls + ' (left to annotate), press "f"')
+        instructions.push('If there is no ' + cls + ' (left to annotate), press "f"')
     }
-    return messages;
+    return instructions;
 }
 
 class LabelInterface extends React.Component {
@@ -51,7 +51,7 @@ class LabelInterface extends React.Component {
             deleted: [],
             user_input: [],
             predictions: [],
-            messages: [],
+            instruction: [],
             redirect: undefined,
         };
         this.handle_click = this.handle_click.bind(this);
@@ -89,12 +89,12 @@ class LabelInterface extends React.Component {
                         response => response.json(),
                         error => console.log('An error occurred.', error))
                     .then(pred => {
-                        let messages = [];
+                        let instruction = [];
                         if (pred.length > 0) {
-                            messages = get_message_for_prediction(pred[0])
+                            instruction = get_instruction_for_prediction(pred[0])
                         }
                         else {
-                            messages = ['Annotate any object you see below.'];
+                            instruction = ['Annotate any object you see below.'];
                         }
                         this.setState({
                             classes: json.classes,
@@ -103,7 +103,7 @@ class LabelInterface extends React.Component {
                             image: image,
                             user_input: [undefined, undefined, undefined, undefined],
                             predictions: pred,
-                            messages: messages,
+                            instruction: instruction,
                             redirect: undefined,
                         });
                     });
@@ -175,7 +175,7 @@ class LabelInterface extends React.Component {
                     image: newState.image,
                     user_input: ui,
                     predictions: newState.predictions,
-                    messages: newState.messages,
+                    instruction: newState.instruction,
                     redirect: newState.redirect
                 });
                 break;
@@ -256,10 +256,40 @@ class LabelInterface extends React.Component {
 
 
         //1-9: delete / re-add bounding box with this index
-        if (kc > 48 && kc < 58 && newState.classes.length >= (kc - 48)) {
+        else if (kc > 48 && kc < 58 && newState.classes.length >= (kc - 48)) {
             newState.deleted[kc - 49] = !newState.deleted[kc - 49];
             this.has_changed = true;
         }
+
+        else if (newState.predictions.length > 0) {
+            //F: falsify proposal
+            if (kc === 70) {
+                newState.predictions.splice(0, 1);
+            }
+
+            //V: verify a proposal
+            else if (kc === 86) {
+                let pred = newState.predictions.splice(0, 1)[0];
+                let width = this.state.image.width;
+                let height = this.state.image.height;
+                let res_fac = compute_resize_factor(width, height);
+                //convert to absolute coordinates
+                pred['XMin'] = pred['XMin'] * width * res_fac;
+                pred['XMax'] = pred['XMax'] * width * res_fac;
+                pred['YMin'] = pred['YMin'] * height * res_fac;
+                pred['YMax'] = pred['YMax'] * height * res_fac;
+                newState.classes.push(pred['LabelName']);
+                newState.boxes.push([pred['XMin'], pred['YMin'], pred['XMax'], pred['YMax']]);
+                newState.deleted.push(false)
+            }
+            if (newState.predictions.length > 0) {
+                newState.instruction = get_instruction_for_prediction(newState.predictions[0])
+            }
+            else {
+                newState.instruction = ['Annotate any object you see below.'];
+            }
+        }
+
 
         this.setState({
             classes: newState.classes,
@@ -269,7 +299,7 @@ class LabelInterface extends React.Component {
             image: newState.image,
             user_input: newState.user_input,
             predictions: newState.predictions,
-            messages: newState.messages,
+            instruction: newState.instruction,
             redirect: newState.redirect
         })
     }
@@ -391,7 +421,7 @@ class LabelInterface extends React.Component {
                         image: state.image,
                         user_input: state.user_input,
                         predictions: state.predictions,
-                        messages: state.messages,
+                        instruction: state.instruction,
                         redirect: undefined,
                     })
                 }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
@@ -399,9 +429,9 @@ class LabelInterface extends React.Component {
             </li>
         );
 
-        let messages_list = state.messages.map((message, index) =>
+        let instruction_list = state.instruction.map((instruction, index) =>
             <li key={index}>
-                <b>{message}</b>
+                <b>{instruction}</b>
             </li>
         );
 
@@ -413,7 +443,7 @@ class LabelInterface extends React.Component {
                 <ul>{history_list}</ul>
             </div>,
             <div key="3">
-                <ul>{messages_list}</ul>
+                <ul>{instruction_list}</ul>
             </div>,
             <canvas key="4" ref={this.canvasRev} width="1200" height="800"
                     onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
