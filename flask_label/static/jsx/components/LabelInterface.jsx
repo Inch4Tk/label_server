@@ -152,7 +152,7 @@ class LabelInterface extends React.Component {
     }
 
     handle_click(event) {
-        let prevState = this.state;
+        let newState = this.state;
         let ui = this.state.user_input;
         let img_width = this.state.image.width;
         let img_height = this.state.image.height;
@@ -168,15 +168,15 @@ class LabelInterface extends React.Component {
             if (!ui[i]) {
                 ui[i] = [x, y];
                 this.setState({
-                    classes: prevState.classes,
-                    boxes: prevState.boxes,
-                    image_list: prevState.image_list,
-                    deleted: prevState.deleted,
-                    image: prevState.image,
+                    classes: newState.classes,
+                    boxes: newState.boxes,
+                    image_list: newState.image_list,
+                    deleted: newState.deleted,
+                    image: newState.image,
                     user_input: ui,
-                    predictions: prevState.predictions,
-                    messages: prevState.messages,
-                    redirect: prevState.redirect
+                    predictions: newState.predictions,
+                    messages: newState.messages,
+                    redirect: newState.redirect
                 });
                 break;
             }
@@ -188,9 +188,8 @@ class LabelInterface extends React.Component {
 
     track_mouse_position(event) {
         try {
-            let prevState = this.state;
-            let img_width = prevState.image.width;
-            let img_height = prevState.image.height;
+            let img_width = this.state.image.width;
+            let img_height = this.state.image.height;
             let resize_factor = compute_resize_factor(img_width, img_height);
             let new_width = img_width * resize_factor;
             let new_height = img_height * resize_factor;
@@ -211,42 +210,22 @@ class LabelInterface extends React.Component {
 
         let open_tasks_ids = batch.tasks.filter(
             (t) => !t.is_labeled && t.id !== task.id).map((t) => t.id);
-        let prevState = this.state;
+        let newState = this.state;
 
         //Q: backwards
         if (kc === 81 && task_ids.includes(task.id - 1)) {
-            this.setState({
-                classes: prevState.classes,
-                boxes: prevState.boxes,
-                image_list: prevState.image_list,
-                deleted: prevState.deleted,
-                image: prevState.image,
-                user_input: prevState.user_input,
-                predictions: prevState.predictions,
-                messages: prevState.messages,
-                redirect: "/label_images/" + batch.id + "/" + (task.id - 1),
-            });
+            newState.redirect = "/label_images/" + batch.id + "/" + (task.id - 1)
         }
 
         //E: forwards
         if (kc === 69 && task_ids.includes(task.id + 1)) {
-            this.setState({
-                classes: prevState.classes,
-                boxes: prevState.boxes,
-                image_list: prevState.image_list,
-                deleted: prevState.deleted,
-                image: prevState.image,
-                user_input: prevState.user_input,
-                predictions: prevState.predictions,
-                messages: prevState.messages,
-                redirect: "/label_images/" + batch.id + "/" + (task.id + 1)
-            });
+            newState.redirect = "/label_images/" + batch.id + "/" + (task.id + 1)
         }
 
         //WASD: points of extreme clicking
         else if ([65, 68, 83, 87].includes(kc)) {
             let mp = this.mouse_position;
-            let ui = prevState.user_input;
+            let ui = newState.user_input;
             //W 1st point of extreme clicking
             if (kc === 87) {
                 ui[0] = [mp.x, mp.y]
@@ -267,56 +246,32 @@ class LabelInterface extends React.Component {
             if (ui[0] && ui[1] && ui[2] && ui[3]) {
                 this.add_new_bounding_box()
             }
-
-            else {
-                this.setState({
-                    classes: prevState.classes,
-                    boxes: prevState.boxes,
-                    image_list: prevState.image_list,
-                    deleted: prevState.deleted,
-                    image: prevState.image,
-                    user_input: ui,
-                    predictions: prevState.predictions,
-                    messages: prevState.messages,
-                    redirect: prevState.redirect
-                })
-            }
         }
 
         //R: jump to random, unlabeled task from current batch
         else if (kc === 82) {
             let new_task_id = open_tasks_ids[Math.floor(Math.random() * open_tasks_ids.length)];
-            this.setState({
-                classes: prevState.classes,
-                boxes: prevState.boxes,
-                image_list: prevState.image_list,
-                deleted: prevState.deleted,
-                image: prevState.image,
-                user_input: prevState.user_input,
-                predictions: prevState.predictions,
-                messages: prevState.messages,
-                redirect: "/label_images/" + batch.id + "/" + new_task_id,
-            });
+            newState.redirect = "/label_images/" + batch.id + "/" + new_task_id;
         }
 
 
-        //numbers for deleting / re-adding bounding box with this index
-        if (kc > 48 && kc < 58 && prevState.classes.length >= (kc - 48)) {
-            prevState.deleted[kc - 49] = !prevState.deleted[kc - 49];
+        //1-9: delete / re-add bounding box with this index
+        if (kc > 48 && kc < 58 && newState.classes.length >= (kc - 48)) {
+            newState.deleted[kc - 49] = !newState.deleted[kc - 49];
             this.has_changed = true;
-            this.setState({
-                classes: prevState.classes,
-                boxes: prevState.boxes,
-                image_list: prevState.image_list,
-                deleted: prevState.deleted,
-                image: prevState.image,
-                user_input: prevState.user_input,
-                predictions: prevState.predictions,
-                messages: prevState.messages,
-                redirect: prevState.redirect
-            })
         }
 
+        this.setState({
+            classes: newState.classes,
+            boxes: newState.boxes,
+            image_list: newState.image_list,
+            deleted: newState.deleted,
+            image: newState.image,
+            user_input: newState.user_input,
+            predictions: newState.predictions,
+            messages: newState.messages,
+            redirect: newState.redirect
+        })
     }
 
     render_image() {
@@ -372,7 +327,7 @@ class LabelInterface extends React.Component {
     }
 
     add_new_bounding_box() {
-        let prevState = this.state;
+        let newState = this.state;
         let ui = this.state.user_input;
         let x_min = Math.min(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let x_max = Math.max(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
@@ -384,20 +339,20 @@ class LabelInterface extends React.Component {
         let c = prompt("Please enter the class of your label");
 
         if (c) {
-            prevState.boxes.push(new_box);
-            prevState.classes.push(c);
-            prevState.deleted.push(false);
+            newState.boxes.push(new_box);
+            newState.classes.push(c);
+            newState.deleted.push(false);
         }
 
         this.has_changed = true;
         this.setState({
-            classes: prevState.classes,
-            boxes: prevState.boxes,
-            image_list: prevState.image_list,
-            deleted: prevState.deleted,
-            image: prevState.image,
+            classes: newState.classes,
+            boxes: newState.boxes,
+            image_list: newState.image_list,
+            deleted: newState.deleted,
+            image: newState.image,
             user_input: [undefined, undefined, undefined, undefined],
-            predictions: prevState.predictions,
+            predictions: newState.predictions,
             redirect: undefined,
         });
     }
