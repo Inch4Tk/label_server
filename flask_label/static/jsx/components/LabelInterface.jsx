@@ -14,22 +14,28 @@ function render_filename(task, current_task) {
     }
 }
 
-function get_index_for_image(image_list, id) {
-    let i;
-    for (i = 0; i < image_list.length; i++) {
-        if (parseInt(image_list[i].key, 10) === id) {
-            return i
-        }
-    }
-    return -1
-}
-
 function compute_resize_factor(img_width, img_height) {
     //Resize factor w.r.t. the canvas size (1200,800) s.t. image fits the canvas as well as possible
     //Add a border of width 10 in order to make clicks close to the boarder easier to handle
     let resize_factor_width = 1180 / img_width;
     let resize_factor_height = 780 / img_height;
     return Math.min(resize_factor_width, resize_factor_height);
+}
+
+function get_message_for_prediction(prediction) {
+    //Create a message that gets displayed to a user when a prediction from the neural networks
+    //is available.
+    let cls = prediction['LabelName'];
+    let action = (prediction['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
+    let messages = [];
+    messages.push('Please ' + action + cls + ' you see in this picture.');
+    if (action === 'verify the ') {
+        messages.push('Press "v" to verify or "f" to falsify.');
+    }
+    else {
+        messages.push('If there is no ' + cls + ' (left to annotate), press "f"')
+    }
+    return messages;
 }
 
 class LabelInterface extends React.Component {
@@ -45,6 +51,7 @@ class LabelInterface extends React.Component {
             deleted: [],
             user_input: [],
             predictions: [],
+            messages: [],
             redirect: undefined,
         };
         this.handle_click = this.handle_click.bind(this);
@@ -82,6 +89,13 @@ class LabelInterface extends React.Component {
                         response => response.json(),
                         error => console.log('An error occurred.', error))
                     .then(pred => {
+                        let messages = [];
+                        if (pred.length > 0) {
+                            messages = get_message_for_prediction(pred[0])
+                        }
+                        else {
+                            messages = ['Annotate any object you see below.'];
+                        }
                         this.setState({
                             classes: json.classes,
                             boxes: json.boxes,
@@ -89,6 +103,7 @@ class LabelInterface extends React.Component {
                             image: image,
                             user_input: [undefined, undefined, undefined, undefined],
                             predictions: pred,
+                            messages: messages,
                             redirect: undefined,
                         });
                     });
@@ -160,6 +175,7 @@ class LabelInterface extends React.Component {
                     image: prevState.image,
                     user_input: ui,
                     predictions: prevState.predictions,
+                    messages: prevState.messages,
                     redirect: prevState.redirect
                 });
                 break;
@@ -207,6 +223,7 @@ class LabelInterface extends React.Component {
                 image: prevState.image,
                 user_input: prevState.user_input,
                 predictions: prevState.predictions,
+                messages: prevState.messages,
                 redirect: "/label_images/" + batch.id + "/" + (task.id - 1),
             });
         }
@@ -221,6 +238,7 @@ class LabelInterface extends React.Component {
                 image: prevState.image,
                 user_input: prevState.user_input,
                 predictions: prevState.predictions,
+                messages: prevState.messages,
                 redirect: "/label_images/" + batch.id + "/" + (task.id + 1)
             });
         }
@@ -259,6 +277,7 @@ class LabelInterface extends React.Component {
                     image: prevState.image,
                     user_input: ui,
                     predictions: prevState.predictions,
+                    messages: prevState.messages,
                     redirect: prevState.redirect
                 })
             }
@@ -275,6 +294,7 @@ class LabelInterface extends React.Component {
                 image: prevState.image,
                 user_input: prevState.user_input,
                 predictions: prevState.predictions,
+                messages: prevState.messages,
                 redirect: "/label_images/" + batch.id + "/" + new_task_id,
             });
         }
@@ -292,6 +312,7 @@ class LabelInterface extends React.Component {
                 image: prevState.image,
                 user_input: prevState.user_input,
                 predictions: prevState.predictions,
+                messages: prevState.messages,
                 redirect: prevState.redirect
             })
         }
@@ -415,6 +436,7 @@ class LabelInterface extends React.Component {
                         image: state.image,
                         user_input: state.user_input,
                         predictions: state.predictions,
+                        messages: state.messages,
                         redirect: undefined,
                     })
                 }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
@@ -422,7 +444,12 @@ class LabelInterface extends React.Component {
             </li>
         );
 
-        let index = get_index_for_image(image_list, this.task_id);
+        let messages_list = state.messages.map((message, index) =>
+            <li key={index}>
+                <b>{message}</b>
+            </li>
+        );
+
         return ([
             <div key="1" className="filenav">
                 <ul>{image_list}</ul>
@@ -430,14 +457,10 @@ class LabelInterface extends React.Component {
             <div key="2" className="historynav">
                 <ul>{history_list}</ul>
             </div>,
-            <h1 key="3"> Label Image</h1>,
-            <em key="4" className="alignleft">
-                {image_list[index - 1]}
-            </em>,
-            <em key="5" className="alignright">
-                {image_list[index + 1]}
-            </em>,
-            <canvas key="6" ref={this.canvasRev} width="1200" height="800"
+            <div key="3">
+                <ul>{messages_list}</ul>
+            </div>,
+            <canvas key="4" ref={this.canvasRev} width="1200" height="800"
                     onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
         ])
     }
