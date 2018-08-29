@@ -3,10 +3,15 @@ import random
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
+import numpy as np
 from flask import (
     Blueprint, current_app, send_from_directory, jsonify, request
 )
 
+from annotation_predictor import accept_prob_predictor
+from annotation_predictor.send_od_request import send_od_request
+from annotation_predictor.util.class_reader import ClassReader
+from annotation_predictor.util.settings import class_ids_oid_file
 from flask_label.auth import api_login_required
 from flask_label.database import db
 from flask_label.database_cli import db_update_task
@@ -206,3 +211,30 @@ def save_labels(img_id):
     db_update_task()
 
     return jsonify(success=True)
+
+@bp.route('/get_prediction/<int:img_id>/')
+@api_login_required
+def get_prediction(img_id):
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    img_path = os.path.join(
+        current_app.instance_path,
+        current_app.config["IMAGE_DIR"],
+        img_task.batch.dirname,
+        img_task.filename
+    )
+
+    prediction = send_od_request(img_path)
+    acceptance_prediction = accept_prob_predictor.main('predict', prediction)
+
+    prediction = list(prediction.values())[0]
+    acceptance_prediction = np.squeeze(acceptance_prediction, axis=1).tolist()
+
+    if len(prediction) > 0:
+        class_reader = ClassReader(class_ids_oid_file)
+
+        for i, pred in enumerate(acceptance_prediction):
+            prediction[i]['acceptance_prediction'] = pred
+            prediction[i]['LabelName'] = class_reader.get_class_from_id(prediction[i]['LabelName'])
+
+    return jsonify(prediction)

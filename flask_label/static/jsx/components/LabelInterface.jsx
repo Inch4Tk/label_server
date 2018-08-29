@@ -36,14 +36,15 @@ class LabelInterface extends React.Component {
     constructor(props) {
         super(props);
         this.mouse_position = undefined;
+        this.has_changed = false;
+        this.task_id = -1;
         this.canvasRev = React.createRef();
         this.state = {
             classes: [],
             boxes: [],
             deleted: [],
-            task_id: -1,
             user_input: [],
-            has_changed: false,
+            predictions: [],
             redirect: undefined,
         };
         this.handle_click = this.handle_click.bind(this);
@@ -57,6 +58,7 @@ class LabelInterface extends React.Component {
         document.addEventListener('keydown', this.handle_keypress);
 
         let {task} = this.props;
+        this.task_id = task.id;
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
         let res_fac = undefined;
@@ -75,23 +77,28 @@ class LabelInterface extends React.Component {
                     }
                 }
 
-                this.setState({
-                    classes: json.classes,
-                    boxes: json.boxes,
-                    deleted: deleted,
-                    task_id: task.id,
-                    image: image,
-                    user_input: [undefined, undefined, undefined, undefined],
-                    has_changed: false,
-                    redirect: undefined,
-                });
+                fetch("/api/get_prediction/" + task.id + "/")
+                    .then(
+                        response => response.json(),
+                        error => console.log('An error occurred.', error))
+                    .then(pred => {
+                        this.setState({
+                            classes: json.classes,
+                            boxes: json.boxes,
+                            deleted: deleted,
+                            image: image,
+                            user_input: [undefined, undefined, undefined, undefined],
+                            predictions: pred,
+                            redirect: undefined,
+                        });
+                    });
             });
     }
 
     componentWillUnmount() {
         console.log("Component will unmount");
         document.removeEventListener('keydown', this.handle_keypress);
-        if (this.state.has_changed) {
+        if (this.has_changed) {
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
             let classes = this.state.classes;
@@ -121,7 +128,7 @@ class LabelInterface extends React.Component {
                 'height': this.state.image.height
             });
             let request = new XMLHttpRequest();
-            let url = '/api/save_labels/' + this.state.task_id + '/';
+            let url = '/api/save_labels/' + this.task_id + '/';
             let shouldBeAsync = true;
             request.open('POST', url, shouldBeAsync);
             request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
@@ -150,10 +157,9 @@ class LabelInterface extends React.Component {
                     boxes: prevState.boxes,
                     image_list: prevState.image_list,
                     deleted: prevState.deleted,
-                    task_id: prevState.task_id,
                     image: prevState.image,
                     user_input: ui,
-                    has_changed: prevState.has_changed,
+                    predictions: prevState.predictions,
                     redirect: prevState.redirect
                 });
                 break;
@@ -198,10 +204,9 @@ class LabelInterface extends React.Component {
                 boxes: prevState.boxes,
                 image_list: prevState.image_list,
                 deleted: prevState.deleted,
-                task_id: prevState.task_id,
                 image: prevState.image,
                 user_input: prevState.user_input,
-                has_changed: prevState.has_changed,
+                predictions: prevState.predictions,
                 redirect: "/label_images/" + batch.id + "/" + (task.id - 1),
             });
         }
@@ -213,10 +218,9 @@ class LabelInterface extends React.Component {
                 boxes: prevState.boxes,
                 image_list: prevState.image_list,
                 deleted: prevState.deleted,
-                task_id: prevState.task_id,
                 image: prevState.image,
                 user_input: prevState.user_input,
-                has_changed: prevState.has_changed,
+                predictions: prevState.predictions,
                 redirect: "/label_images/" + batch.id + "/" + (task.id + 1)
             });
         }
@@ -252,10 +256,9 @@ class LabelInterface extends React.Component {
                     boxes: prevState.boxes,
                     image_list: prevState.image_list,
                     deleted: prevState.deleted,
-                    task_id: prevState.task_id,
                     image: prevState.image,
                     user_input: ui,
-                    has_changed: prevState.has_changed,
+                    predictions: prevState.predictions,
                     redirect: prevState.redirect
                 })
             }
@@ -269,10 +272,9 @@ class LabelInterface extends React.Component {
                 boxes: prevState.boxes,
                 image_list: prevState.image_list,
                 deleted: prevState.deleted,
-                task_id: prevState.task_id,
                 image: prevState.image,
                 user_input: prevState.user_input,
-                has_changed: prevState.has_changed,
+                predictions: prevState.predictions,
                 redirect: "/label_images/" + batch.id + "/" + new_task_id,
             });
         }
@@ -281,16 +283,15 @@ class LabelInterface extends React.Component {
         //numbers for deleting / re-adding bounding box with this index
         if (kc > 48 && kc < 58 && prevState.classes.length >= (kc - 48)) {
             prevState.deleted[kc - 49] = !prevState.deleted[kc - 49];
-
+            this.has_changed = true;
             this.setState({
                 classes: prevState.classes,
                 boxes: prevState.boxes,
                 image_list: prevState.image_list,
                 deleted: prevState.deleted,
-                task_id: prevState.task_id,
                 image: prevState.image,
                 user_input: prevState.user_input,
-                has_changed: true,
+                predictions: prevState.predictions,
                 redirect: prevState.redirect
             })
         }
@@ -367,15 +368,15 @@ class LabelInterface extends React.Component {
             prevState.deleted.push(false);
         }
 
+        this.has_changed = true;
         this.setState({
             classes: prevState.classes,
             boxes: prevState.boxes,
             image_list: prevState.image_list,
             deleted: prevState.deleted,
-            task_id: prevState.task_id,
             image: prevState.image,
             user_input: [undefined, undefined, undefined, undefined],
-            has_changed: true,
+            predictions: prevState.predictions,
             redirect: undefined,
         });
     }
@@ -406,14 +407,14 @@ class LabelInterface extends React.Component {
             <li key={index}>
                 <button onClick={() => {
                     state.deleted[index] = !state.deleted[index];
+                    this.has_changed = true;
                     this.setState({
                         classes: state.classes,
                         boxes: state.boxes,
                         deleted: state.deleted,
-                        task_id: state.task_id,
                         image: state.image,
                         user_input: state.user_input,
-                        has_changed: true,
+                        predictions: state.predictions,
                         redirect: undefined,
                     })
                 }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
@@ -421,7 +422,7 @@ class LabelInterface extends React.Component {
             </li>
         );
 
-        let index = get_index_for_image(image_list, state.task_id);
+        let index = get_index_for_image(image_list, this.task_id);
         return ([
             <div key="1" className="filenav">
                 <ul>{image_list}</ul>
