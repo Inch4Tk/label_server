@@ -363,7 +363,14 @@ class LabelInterface extends React.Component {
 
         let new_box = [x_min, y_min, x_max, y_max];
 
-        let c = prompt("Please enter the class of your label");
+        let c = undefined;
+        if (newState.predictions.length > 0) {
+            let pred = newState.predictions.splice(0, 1)[0];
+            c = pred['LabelName'];
+        }
+        else {
+            c = prompt("Please enter the class of your label");
+        }
 
         if (c) {
             newState.boxes.push(new_box);
