@@ -268,6 +268,7 @@ class LabelInterface extends React.Component {
 
             //V: verify a proposal
             else if (kc === 86) {
+                this.has_changed = true;
                 let pred = newState.predictions.splice(0, 1)[0];
                 let width = this.image.width;
                 let height = this.image.height;
