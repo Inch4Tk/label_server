@@ -270,18 +270,12 @@ class LabelInterface extends React.Component {
             else if (kc === 86) {
                 this.has_changed = true;
                 let pred = newState.predictions.splice(0, 1)[0];
-                let width = this.image.width;
-                let height = this.image.height;
-                let res_fac = compute_resize_factor(width, height);
-                //convert to absolute coordinates
-                pred['XMin'] = pred['XMin'] * width * res_fac;
-                pred['XMax'] = pred['XMax'] * width * res_fac;
-                pred['YMin'] = pred['YMin'] * height * res_fac;
-                pred['YMax'] = pred['YMax'] * height * res_fac;
+
                 newState.classes.push(pred['LabelName']);
                 newState.boxes.push([pred['XMin'], pred['YMin'], pred['XMax'], pred['YMax']]);
                 newState.deleted.push(false)
             }
+
             if (newState.predictions.length > 0) {
                 newState.instructions = get_instruction_for_prediction(newState.predictions[0])
             }
@@ -309,6 +303,7 @@ class LabelInterface extends React.Component {
             let b = this.state.boxes;
             let c = this.state.classes;
             let d = this.state.deleted;
+            let p = this.state.predictions[0];
             let resize_factor = compute_resize_factor(img_width, img_height);
             let new_width = img_width * resize_factor;
             let new_height = img_height * resize_factor;
@@ -341,6 +336,30 @@ class LabelInterface extends React.Component {
                     ctx.rect(b[i][0] + 10, b[i][1] + 10, b[i][2] - b[i][0], b[i][3] - b[i][1]);
                     ctx.stroke();
                 }
+            }
+
+            //if a verification is to be made, render the proposed label
+            if (p['acceptance_prediction'] === 1) {
+                ctx.beginPath();
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 15]);
+                ctx.fillStyle = colors[b.length % colors.length];
+                ctx.strokeStyle = colors[b.length % colors.length];
+
+                let width = this.image.width;
+                let height = this.image.height;
+                let res_fac = compute_resize_factor(width, height);
+                //convert to absolute coordinates
+                p['XMin'] = p['XMin'] * width * res_fac;
+                p['XMax'] = p['XMax'] * width * res_fac;
+                p['YMin'] = p['YMin'] * height * res_fac;
+                p['YMax'] = p['YMax'] * height * res_fac;
+
+                ctx.fillText(p['LabelName'], p['XMin'] + 15, p['YMin'] + 30);
+                ctx.rect(p['XMin'] + 10, p['YMin'] + 10,
+                    p['XMax'] - p['XMin'], p['YMax'] - p['YMin']);
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
         }
         catch (e) {
