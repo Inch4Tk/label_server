@@ -22,11 +22,15 @@ function compute_resize_factor(img_width, img_height) {
     return Math.min(resize_factor_width, resize_factor_height);
 }
 
-function get_instruction_for_prediction(prediction) {
+function get_instructions(predictions) {
     //Create a message that gets displayed to a user when a prediction from the neural networks
     //is available.
-    let cls = prediction['LabelName'];
-    let action = (prediction['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
+    if (predictions.length === 0) {
+        return ['Annotate any object you see below.'];
+    }
+
+    let cls = predictions[0]['LabelName'];
+    let action = (predictions[0]['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
     let instructions = [];
     instructions.push('Please ' + action + cls + ' you see in this picture.');
     if (action === 'verify the ') {
@@ -84,19 +88,11 @@ class LabelInterface extends React.Component {
                         json.boxes[i][j] = json.boxes[i][j] * res_fac;
                     }
                 }
-
                 fetch("/api/get_prediction/" + task.id + "/")
                     .then(
                         response => response.json(),
                         error => console.log('An error occurred.', error))
                     .then(pred => {
-                        let instruction = [];
-                        if (pred.length > 0) {
-                            instruction = get_instruction_for_prediction(pred[0])
-                        }
-                        else {
-                            instruction = ['Annotate any object you see below.'];
-                        }
                         this.image = image;
                         this.setState({
                             classes: json.classes,
@@ -104,7 +100,7 @@ class LabelInterface extends React.Component {
                             deleted: deleted,
                             user_input: [undefined, undefined, undefined, undefined],
                             predictions: pred,
-                            instructions: instruction,
+                            instructions: get_instructions(pred),
                             redirect: undefined,
                         });
                     });
@@ -150,6 +146,14 @@ class LabelInterface extends React.Component {
             request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             request.send(postData);
         }
+
+        let request = new XMLHttpRequest();
+        let url = '/api/save_predictions/' + this.task_id + '/';
+        let shouldBeAsync = true;
+        request.open('POST', url, shouldBeAsync);
+        request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+        request.send(JSON.stringify(this.state.predictions));
+
     }
 
     handle_click(event) {
@@ -243,7 +247,8 @@ class LabelInterface extends React.Component {
             }
 
             if (ui[0] && ui[1] && ui[2] && ui[3]) {
-                this.add_new_bounding_box()
+                this.add_new_bounding_box();
+                return;
             }
         }
 
@@ -252,7 +257,6 @@ class LabelInterface extends React.Component {
             let new_task_id = open_tasks_ids[Math.floor(Math.random() * open_tasks_ids.length)];
             newState.redirect = "/label_images/" + batch.id + "/" + new_task_id;
         }
-
 
         //1-9: delete / re-add bounding box with this index
         else if (kc > 48 && kc < 58 && newState.classes.length >= (kc - 48)) {
@@ -277,7 +281,7 @@ class LabelInterface extends React.Component {
             }
 
             if (newState.predictions.length > 0) {
-                newState.instructions = get_instruction_for_prediction(newState.predictions[0])
+                newState.instructions = get_instructions(newState.predictions)
             }
             else {
                 newState.instructions = ['Annotate any object you see below.'];
@@ -298,6 +302,7 @@ class LabelInterface extends React.Component {
 
     render_image() {
         try {
+            console.log('Rendering image');
             let img_width = this.image.width;
             let img_height = this.image.height;
             let b = this.state.boxes;
@@ -384,8 +389,10 @@ class LabelInterface extends React.Component {
         let new_box = [x_min, y_min, x_max, y_max];
 
         let c = undefined;
-        if (newState.predictions.length > 0) {
+        if (newState.predictions.length > 0 &&
+            newState.predictions[0]['acceptance_prediction'] === 1) {
             let pred = newState.predictions.splice(0, 1)[0];
+            newState.instructions = get_instructions(newState.predictions);
             c = pred['LabelName'];
         }
         else {

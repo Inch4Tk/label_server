@@ -1,7 +1,4 @@
-import logging
-import sys
 import os
-from datetime import timedelta
 
 class Config(object):
     """Base Configurations."""
@@ -16,10 +13,10 @@ class Config(object):
     VALID_LABEL_FILE_ENDINGS = ["xml"]
     IMAGE_DIR = "images"
     IMAGE_LABEL_SUBDIR = "labels"
+    IMAGE_PREDICTIONS_SUBDIR = "predictions"
     VIDEO_DIR = "videos"
     VIDEO_IMG_SUBDIR = "images"
     VIDEO_LABEL_SUBDIR = "labels"
-
 
 class Dev(Config):
     """Development Configurations."""

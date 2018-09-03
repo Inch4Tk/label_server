@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import xml.etree.ElementTree as ET
@@ -223,6 +224,20 @@ def get_prediction(img_id):
         img_task.batch.dirname,
         img_task.filename
     )
+    json_path = os.path.join(
+        current_app.instance_path,
+        current_app.config["IMAGE_DIR"],
+        img_task.batch.dirname,
+        current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
+        img_task.filename
+    )
+    base = os.path.splitext(json_path)[0]
+    json_path = base + '.json'
+
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            prediction = json.load(f)
+        return jsonify(prediction)
 
     prediction = send_od_request(img_path)
     acceptance_prediction = accept_prob_predictor.main('predict', prediction)
@@ -236,5 +251,30 @@ def get_prediction(img_id):
         for i, pred in enumerate(acceptance_prediction):
             prediction[i]['acceptance_prediction'] = pred
             prediction[i]['LabelName'] = class_reader.get_class_from_id(prediction[i]['LabelName'])
-
     return jsonify(prediction)
+
+
+@bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
+@api_login_required
+def save_predictions(img_id):
+    predictions = request.get_json()
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    path = os.path.join(
+        current_app.instance_path,
+        current_app.config['IMAGE_DIR'],
+        img_task.batch.dirname,
+        current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
+        img_task.filename
+    )
+    base = os.path.splitext(path)[0]
+    path = base + '.json'
+
+    result = []
+    for p in predictions:
+        result.append(p)
+
+    with open(path, 'w') as f:
+        json.dump(result, f)
+
+    return jsonify(success=True)
