@@ -214,6 +214,9 @@ class LabelInterface extends React.Component {
         let open_tasks_ids = batch.tasks.filter(
             (t) => !t.is_labeled && t.id !== task.id).map((t) => t.id);
         let newState = this.state;
+        let width = this.image.width;
+        let height = this.image.height;
+        let res_fac = compute_resize_factor(width, height);
 
         //Q: backwards
         if (kc === 81 && task_ids.includes(task.id - 1)) {
@@ -276,7 +279,10 @@ class LabelInterface extends React.Component {
                 let pred = newState.predictions.splice(0, 1)[0];
 
                 newState.classes.push(pred['LabelName']);
-                newState.boxes.push([pred['XMin'], pred['YMin'], pred['XMax'], pred['YMax']]);
+                newState.boxes.push([pred['XMin'] * res_fac * width,
+                                     pred['YMin'] * res_fac * height,
+                                     pred['XMax'] * res_fac * width,
+                                     pred['YMax'] * res_fac * height]);
                 newState.deleted.push(false)
             }
 
@@ -355,14 +361,13 @@ class LabelInterface extends React.Component {
                 let height = this.image.height;
                 let res_fac = compute_resize_factor(width, height);
                 //convert to absolute coordinates
-                p['XMin'] = p['XMin'] * width * res_fac;
-                p['XMax'] = p['XMax'] * width * res_fac;
-                p['YMin'] = p['YMin'] * height * res_fac;
-                p['YMax'] = p['YMax'] * height * res_fac;
+                let x_min = p['XMin'] * width * res_fac;
+                let x_max = p['XMax'] * width * res_fac;
+                let y_min = p['YMin'] * height * res_fac;
+                let y_max = p['YMax'] * height * res_fac;
 
-                ctx.fillText(p['LabelName'], p['XMin'] + 15, p['YMin'] + 30);
-                ctx.rect(p['XMin'] + 10, p['YMin'] + 10,
-                    p['XMax'] - p['XMin'], p['YMax'] - p['YMin']);
+                ctx.fillText(p['LabelName'], x_min + 15, y_min + 30);
+                ctx.rect(x_min + 10, y_min + 10, x_max - x_min, y_max - y_min);
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
