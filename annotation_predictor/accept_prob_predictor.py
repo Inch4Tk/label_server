@@ -1,10 +1,12 @@
 import argparse
 import os
+import shutil
 import sys
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import OutOfRangeError
+from tensorflow.python.saved_model import tag_constants
 
 from annotation_predictor.util.settings import model_dir
 from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
@@ -61,14 +63,20 @@ def main(mode: str, detections=None):
     x = tf.placeholder(tf.float32, [None, 606])
     y = prob_model(x)
 
-    best_acc = 0.0
-    best_acc_ann = 0.0
-    best_acc_ver = 0.0
-    early_stopping_counter = 0
     saver = tf.train.Saver()
 
     if FLAGS and FLAGS.mode == 'train':
         _y = tf.placeholder(tf.float32, [None, 1])
+
+        best_acc = 0.0
+        best_acc_ann = 0.0
+        best_acc_ver = 0.0
+        early_stopping_counter = 0
+
+        accept_prob_model_dir = os.path.join(model_dir, 'accept_prob_predictor')
+        if os.path.exists(accept_prob_model_dir):
+            shutil.rmtree(accept_prob_model_dir, ignore_errors=True)
+        builder = tf.saved_model.builder.SavedModelBuilder(accept_prob_model_dir)
 
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
@@ -112,6 +120,23 @@ def main(mode: str, detections=None):
             init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
             sess.run(init_op)
 
+            prediction_input = tf.saved_model.utils.build_tensor_info(x)
+            prediction_output = tf.saved_model.utils.build_tensor_info(y)
+            prediction_signature = (
+                tf.saved_model.signature_def_utils.build_signature_def(
+                    inputs={tf.saved_model.signature_constants.PREDICT_INPUTS: prediction_input},
+                    outputs={
+                        tf.saved_model.signature_constants.PREDICT_METHOD_NAME: prediction_output},
+                    method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME)
+            )
+            legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
+
+            builder.add_meta_graph_and_variables(
+                sess,
+                [tag_constants.SERVING],
+                signature_def_map={'predict_accept_prob': prediction_signature},
+                legacy_init_op=legacy_init_op)
+
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(coord=coord)
 
@@ -130,12 +155,15 @@ def main(mode: str, detections=None):
                     y_test = y.eval(feed_dict={x: test_feat, _y: test_lbl})
                     acc, acc_ann, acc_ver = evaluate_prediction_record(y_test, test_lbl)
                     if acc_ann + acc_ver > best_acc_ann + best_acc_ver:
-                        print('{}\t{}'.format(acc_ann, acc_ver))
+                        print('New best: Annotation acc.:{}\tVerification acc.:{}'.format(acc_ann,
+                                                                                          acc_ver))
                         best_acc = acc
                         best_acc_ann = acc_ann
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
                         saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
+                        builder.save()
+
                     elif early_stopping_counter == 50:
                         print('Stopped early at batch {}/{}'.format(batch_index, FLAGS.iterations))
                         break
@@ -148,6 +176,11 @@ def main(mode: str, detections=None):
             print('Accuracy:\t{}'.format(best_acc))
             print('Accuracy Ann:\t{}'.format(best_acc_ann))
             print('Accuracy Ver:\t{}'.format(best_acc_ver))
+
+            # move the protobuf-model-file in order for tensorflow serving to find it
+            tf_serving_dir = os.path.join(accept_prob_model_dir, '1')
+            os.mkdir(tf_serving_dir)
+            shutil.move(os.path.join(accept_prob_model_dir, 'saved_model.pb'), tf_serving_dir)
 
             # Stop the threads
             coord.request_stop()
