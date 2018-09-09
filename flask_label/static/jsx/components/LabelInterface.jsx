@@ -22,15 +22,15 @@ function compute_resize_factor(img_width, img_height) {
     return Math.min(resize_factor_width, resize_factor_height);
 }
 
-function get_instructions(predictions) {
+function get_instructions(prediction) {
     //Create a message that gets displayed to a user when a prediction from the neural networks
     //is available.
-    if (predictions.length === 0) {
+    if (prediction === undefined) {
         return ['Annotate any object you see below.'];
     }
 
-    let cls = predictions[0]['LabelName'];
-    let action = (predictions[0]['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
+    let cls = prediction['LabelName'];
+    let action = (prediction['acceptance_prediction'] === 0) ? 'annotate a ' : 'verify the ';
     let instructions = [];
     instructions.push('Please ' + action + cls + ' you see in this picture.');
     if (action === 'verify the ') {
@@ -40,6 +40,44 @@ function get_instructions(predictions) {
         instructions.push('If there is no ' + cls + ' (left to annotate), press "f"')
     }
     return instructions;
+}
+
+function get_open_prediction(predictions) {
+    //Return an open prediction, e.g. one that has not yet been worked on, from a set of predictions
+    for (let i = 0; i < predictions.length; i++) {
+        if (!predictions[i].hasOwnProperty('was_successful')) {
+            return predictions[i];
+        }
+    }
+    return undefined;
+}
+
+function compute_iou(annotation, prediction) {
+    //Compute Intersection over Union between a user annotation and a prediction from the
+    //object detector
+    let x_min = Math.max(annotation[0], prediction['XMin']);
+    let y_min = Math.max(annotation[1], prediction['YMin']);
+    let x_max = Math.min(annotation[2], prediction['XMax']);
+    let y_max = Math.min(annotation[3], prediction['YMax']);
+
+    let intersection_area = Math.max(0.0, x_max - x_min) * Math.max(0.0, y_max - y_min);
+
+    let ann_area = (annotation[2] - annotation[0]) * (annotation[3] - annotation[1]);
+    let pred_area = (prediction['XMax'] - prediction['XMin']) *
+                    (prediction['YMax'] - prediction['YMin']);
+
+    return intersection_area / (ann_area + pred_area - intersection_area);
+}
+
+function should_have_been_verified(annotation, predictions) {
+    for (let i = 0; i < predictions.length; i++) {
+        let p = predictions[i];
+        let iou = compute_iou(annotation, p);
+        if (iou > 0.5) {
+            return true;
+        }
+    }
+    return false;
 }
 
 class LabelInterface extends React.Component {
@@ -93,6 +131,7 @@ class LabelInterface extends React.Component {
                         response => response.json(),
                         error => console.log('An error occurred.', error))
                     .then(pred => {
+                        let open_pred = get_open_prediction(pred);
                         this.image = image;
                         this.setState({
                             classes: json.classes,
@@ -100,7 +139,7 @@ class LabelInterface extends React.Component {
                             deleted: deleted,
                             user_input: [undefined, undefined, undefined, undefined],
                             predictions: pred,
-                            instructions: get_instructions(pred),
+                            instructions: get_instructions(open_pred),
                             redirect: undefined,
                         });
                     });
@@ -217,6 +256,7 @@ class LabelInterface extends React.Component {
         let width = this.image.width;
         let height = this.image.height;
         let res_fac = compute_resize_factor(width, height);
+        let pred = get_open_prediction(newState.predictions);
 
         //Q: backwards
         if (kc === 81 && task_ids.includes(task.id - 1)) {
@@ -267,33 +307,30 @@ class LabelInterface extends React.Component {
             this.has_changed = true;
         }
 
-        else if (newState.predictions.length > 0) {
+        else if (pred) {
             //F: falsify proposal
             if (kc === 70) {
-                newState.predictions.splice(0, 1);
+                //
+                //don't care about falsified annotation proposals as it was fault of object detector
+                //still set variable to true to mark this proposal as complete
+                pred['was_successful'] = (pred['acceptance_prediction'] === 0);
             }
 
             //V: verify a proposal
             else if (kc === 86) {
                 this.has_changed = true;
-                let pred = newState.predictions.splice(0, 1)[0];
+                pred['was_successful'] = true;
 
                 newState.classes.push(pred['LabelName']);
                 newState.boxes.push([pred['XMin'] * res_fac * width,
-                                     pred['YMin'] * res_fac * height,
-                                     pred['XMax'] * res_fac * width,
-                                     pred['YMax'] * res_fac * height]);
+                    pred['YMin'] * res_fac * height,
+                    pred['XMax'] * res_fac * width,
+                    pred['YMax'] * res_fac * height]);
                 newState.deleted.push(false)
             }
 
-            if (newState.predictions.length > 0) {
-                newState.instructions = get_instructions(newState.predictions)
-            }
-            else {
-                newState.instructions = ['Annotate any object you see below.'];
-            }
+            newState.instructions = get_instructions(get_open_prediction(newState.predictions));
         }
-
 
         this.setState({
             classes: newState.classes,
@@ -314,7 +351,7 @@ class LabelInterface extends React.Component {
             let b = this.state.boxes;
             let c = this.state.classes;
             let d = this.state.deleted;
-            let p = this.state.predictions[0];
+            let p = get_open_prediction(this.state.predictions);
             let resize_factor = compute_resize_factor(img_width, img_height);
             let new_width = img_width * resize_factor;
             let new_height = img_height * resize_factor;
@@ -385,7 +422,10 @@ class LabelInterface extends React.Component {
 
     add_new_bounding_box() {
         let newState = this.state;
-        let ui = this.state.user_input;
+        let ui = newState.user_input;
+        let width = this.image.width;
+        let height = this.image.height;
+        let res_fac = compute_resize_factor(width, height);
         let x_min = Math.min(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let x_max = Math.max(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let y_min = Math.min(ui[0][1], ui[1][1], ui[2][1], ui[3][1]);
@@ -393,12 +433,19 @@ class LabelInterface extends React.Component {
 
         let new_box = [x_min, y_min, x_max, y_max];
 
+        let pred = get_open_prediction(newState.predictions);
         let c = undefined;
-        if (newState.predictions.length > 0 &&
-            newState.predictions[0]['acceptance_prediction'] === 1) {
-            let pred = newState.predictions.splice(0, 1)[0];
-            newState.instructions = get_instructions(newState.predictions);
+        if (pred && pred['acceptance_prediction'] === 0) {
             c = pred['LabelName'];
+            //get relative box coordinates i.o. to compute IoU
+            let b = new_box.slice();
+            b[0] = b[0] / res_fac / width;
+            b[1] = b[1] / res_fac / width;
+            b[2] = b[2] / res_fac / height;
+            b[3] = b[3] / res_fac / height;
+            pred['was_successful'] = !should_have_been_verified(b, newState.predictions);
+            let new_pred = get_open_prediction(newState.predictions);
+            newState.instructions = get_instructions(new_pred);
         }
         else {
             c = prompt("Please enter the class of your label");
