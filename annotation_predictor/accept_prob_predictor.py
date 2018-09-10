@@ -161,7 +161,7 @@ def main(mode: str, detections=None):
                         best_acc_ann = acc_ann
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
-                        saver.save(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
+                        saver.save(sess, os.path.join(accept_prob_model_dir, 'prob_predictor.ckpt'))
                         builder.save()
 
                     elif early_stopping_counter == 50:
