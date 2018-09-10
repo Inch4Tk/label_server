@@ -1,6 +1,5 @@
 import argparse
 import os
-import shutil
 import sys
 
 import numpy as np
@@ -52,10 +51,10 @@ def prob_model(x):
 
 def main(mode: str, detections=None):
     """
-    Trains a new model or uses an existent model to make predictions.
+    Trains a model or uses an existent model to make predictions.
 
     Args:
-        mode: Defines whether a new model should be trained
+        mode: Defines whether a model should be trained
         or an existent model should be used for making predictions.
         detections: Used in detection-mode to give a list of detections
         for which predictions should be generated.
@@ -65,6 +64,18 @@ def main(mode: str, detections=None):
 
     saver = tf.train.Saver()
 
+    accept_prob_model_dir = os.path.join(model_dir, 'accept_prob_predictor')
+
+    if not os.path.exists(accept_prob_model_dir):
+        os.mkdir(accept_prob_model_dir)
+
+    existent_checkpoints = os.listdir(accept_prob_model_dir)
+    actual_checkpoint = len(existent_checkpoints)
+    new_checkpoint = str(actual_checkpoint + 1)
+    actual_checkpoint = str(actual_checkpoint)
+    actual_checkpoint_dir = os.path.join(model_dir, 'accept_prob_predictor', actual_checkpoint)
+    new_checkpoint_dir = os.path.join(model_dir, 'accept_prob_predictor', new_checkpoint)
+
     if FLAGS and FLAGS.mode == 'train':
         _y = tf.placeholder(tf.float32, [None, 1])
 
@@ -73,18 +84,11 @@ def main(mode: str, detections=None):
         best_acc_ver = 0.0
         early_stopping_counter = 0
 
-        accept_prob_model_dir = os.path.join(model_dir, 'accept_prob_predictor')
-        if os.path.exists(accept_prob_model_dir):
-            shutil.rmtree(accept_prob_model_dir, ignore_errors=True)
-        builder = tf.saved_model.builder.SavedModelBuilder(accept_prob_model_dir)
+        builder = tf.saved_model.builder.SavedModelBuilder(new_checkpoint_dir)
 
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
-
-        correct_prediction = tf.equal(tf.round(y), _y)
-        correct_prediction = tf.cast(correct_prediction, tf.float32)
-        accuracy = tf.reduce_mean(correct_prediction)
 
         with tf.Session() as sess:
             base = FLAGS.path_to_training_data
@@ -106,6 +110,7 @@ def main(mode: str, detections=None):
                                                                   capacity=50000,
                                                                   min_after_dequeue=0,
                                                                   allow_smaller_final_batch=True)
+
             test_feat = []
             test_lbl = []
             example = tf.train.Example()
@@ -117,8 +122,13 @@ def main(mode: str, detections=None):
             test_feat = np.reshape(test_feat, (-1, 606))
             test_lbl = np.reshape(test_lbl, (-1, 1))
 
-            init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+            init_op = tf.group(tf.global_variables_initializer(),
+                               tf.local_variables_initializer())
             sess.run(init_op)
+
+            if new_checkpoint != '1':
+                saver.restore(sess, os.path.join(accept_prob_model_dir, actual_checkpoint,
+                                                 'prob_predictor.ckpt'))
 
             prediction_input = tf.saved_model.utils.build_tensor_info(x)
             prediction_output = tf.saved_model.utils.build_tensor_info(y)
@@ -148,20 +158,17 @@ def main(mode: str, detections=None):
                     break
 
                 if batch_index % 100 == 0:
-                    train_accuracy = accuracy.eval(feed_dict={
-                        x: feat,
-                        _y: lbl})
-                    print('step {},\t training accuracy {}'.format(batch_index, train_accuracy))
                     y_test = y.eval(feed_dict={x: test_feat, _y: test_lbl})
                     acc, acc_ann, acc_ver = evaluate_prediction_record(y_test, test_lbl)
+                    print('step {},\t Annotation acc.:{}\tVerification acc.:{}'.format(batch_index,
+                                                                                       acc_ann,
+                                                                                       acc_ver))
                     if acc_ann + acc_ver > best_acc_ann + best_acc_ver:
-                        print('New best: Annotation acc.:{}\tVerification acc.:{}'.format(acc_ann,
-                                                                                          acc_ver))
                         best_acc = acc
                         best_acc_ann = acc_ann
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
-                        saver.save(sess, os.path.join(accept_prob_model_dir, 'prob_predictor.ckpt'))
+                        saver.save(sess, os.path.join(new_checkpoint_dir, 'prob_predictor.ckpt'))
                         builder.save()
 
                     elif early_stopping_counter == 50:
@@ -176,11 +183,6 @@ def main(mode: str, detections=None):
             print('Accuracy:\t{}'.format(best_acc))
             print('Accuracy Ann:\t{}'.format(best_acc_ann))
             print('Accuracy Ver:\t{}'.format(best_acc_ver))
-
-            # move the protobuf-model-file in order for tensorflow serving to find it
-            tf_serving_dir = os.path.join(accept_prob_model_dir, '1')
-            os.mkdir(tf_serving_dir)
-            shutil.move(os.path.join(accept_prob_model_dir, 'saved_model.pb'), tf_serving_dir)
 
             # Stop the threads
             coord.request_stop()
@@ -197,7 +199,7 @@ def main(mode: str, detections=None):
                 feature_data.append(compute_feature_vector(detections[key], i))
 
         with tf.Session() as sess:
-            saver.restore(sess, os.path.join(model_dir, 'prob_predictor.ckpt'))
+            saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
 
             result = y.eval(feed_dict={
                 x: np.reshape(feature_data, (-1, 606))})
@@ -225,7 +227,7 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument('--learning_rate', type=float,
                         help='learning rate (hyperparameter for training)',
-                        default=0.1)
+                        default=0.03)
     FLAGS, unparsed = parser.parse_known_args()
     args = parser.parse_args()
 
