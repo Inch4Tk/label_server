@@ -244,13 +244,13 @@ def get_prediction(img_id):
 
     prediction = list(prediction.values())[0]
     acceptance_prediction = np.squeeze(acceptance_prediction, axis=1).tolist()
-
     if len(prediction) > 0:
         class_reader = ClassReader(class_ids_oid_file)
 
         for i, pred in enumerate(acceptance_prediction):
             prediction[i]['acceptance_prediction'] = pred
             prediction[i]['LabelName'] = class_reader.get_class_from_id(prediction[i]['LabelName'])
+        prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True,)
     return jsonify(prediction)
 
 
