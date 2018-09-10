@@ -256,9 +256,6 @@ class LabelInterface extends React.Component {
         let kc = key.keyCode;
         let {task, batch} = this.props;
         let task_ids = batch.tasks.map((t) => t.id);
-
-        let open_tasks_ids = batch.tasks.filter(
-            (t) => !t.is_labeled && t.id !== task.id).map((t) => t.id);
         let newState = this.state;
         let width = this.image.width;
         let height = this.image.height;
@@ -302,9 +299,12 @@ class LabelInterface extends React.Component {
             }
         }
 
-        //R: jump to random, unlabeled task from current batch
+        //R: jump to next, unlabeled task from current batch
         else if (kc === 82) {
-            let new_task_id = open_tasks_ids[Math.floor(Math.random() * open_tasks_ids.length)];
+            let open_tasks_ids = batch.tasks.filter(
+                (t) => !t.is_labeled).map((t) => t.id);
+            let current_index = open_tasks_ids.indexOf(task.id);
+            let new_task_id = open_tasks_ids[(current_index+1) % open_tasks_ids.length];
             newState.redirect = "/label_images/" + batch.id + "/" + new_task_id;
         }
 
@@ -338,7 +338,6 @@ class LabelInterface extends React.Component {
 
             newState.instructions = get_instructions(get_open_prediction(newState.predictions));
         }
-
         this.setState({
             classes: newState.classes,
             boxes: newState.boxes,
