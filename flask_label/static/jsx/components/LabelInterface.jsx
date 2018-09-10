@@ -317,7 +317,6 @@ class LabelInterface extends React.Component {
         else if (pred) {
             //F: falsify proposal
             if (kc === 70) {
-                //
                 //don't care about falsified annotation proposals as it was fault of object detector
                 //still set variable to true to mark this proposal as complete
                 pred['was_successful'] = (pred['acceptance_prediction'] === 0);
@@ -449,7 +448,8 @@ class LabelInterface extends React.Component {
             b[1] = b[1] / res_fac / width;
             b[2] = b[2] / res_fac / height;
             b[3] = b[3] / res_fac / height;
-            pred['was_successful'] = !should_have_been_verified(b, newState.predictions);
+            let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === c);
+            pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
             let new_pred = get_open_prediction(newState.predictions);
             newState.instructions = get_instructions(new_pred);
         }
