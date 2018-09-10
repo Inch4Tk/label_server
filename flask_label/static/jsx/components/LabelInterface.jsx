@@ -324,7 +324,7 @@ class LabelInterface extends React.Component {
             }
 
             //V: verify a proposal
-            else if (kc === 86) {
+            else if (kc === 86 && pred['acceptance_prediction'] === 1) {
                 this.has_changed = true;
                 pred['was_successful'] = true;
 
