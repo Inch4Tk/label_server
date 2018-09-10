@@ -174,15 +174,18 @@ def save_labels(img_id):
 
     img_task = ImageTask.query.filter_by(id=img_id).first()
 
-    path = os.path.join(
+    label_path = os.path.join(
         current_app.instance_path,
         current_app.config['IMAGE_DIR'],
         img_task.batch.dirname,
         current_app.config['IMAGE_LABEL_SUBDIR'],
-        img_task.filename
     )
-    base = os.path.splitext(path)[0]
-    path = base + '.xml'
+    if not os.path.exists(label_path):
+        os.mkdir(label_path)
+
+    file_path = os.path.join(label_path, img_task.filename)
+    base = os.path.splitext(file_path)[0]
+    file_path = base + '.xml'
 
     if len(classes) != 0:
         root = ET.Element('annotation')
@@ -203,11 +206,11 @@ def save_labels(img_id):
         rough_str = ET.tostring(root)
         pretty_str = minidom.parseString(rough_str).toprettyxml(indent="  ")
 
-        with open(path, 'w') as f:
+        with open(file_path, 'w') as f:
             f.write(pretty_str)
 
-    elif os.path.exists(path):
-        os.remove(path)
+    elif os.path.exists(file_path):
+        os.remove(file_path)
 
     db_update_task()
 
@@ -265,16 +268,20 @@ def save_predictions(img_id):
         current_app.config['IMAGE_DIR'],
         img_task.batch.dirname,
         current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
-        img_task.filename
     )
-    base = os.path.splitext(path)[0]
-    path = base + '.json'
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    file_path = os.path.join(path, img_task.filename)
+    base = os.path.splitext(file_path)[0]
+    file_path = base + '.json'
 
     result = []
     for p in predictions:
         result.append(p)
 
-    with open(path, 'w') as f:
+    with open(file_path, 'w') as f:
         json.dump(result, f)
 
     return jsonify(success=True)
