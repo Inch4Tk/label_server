@@ -19,18 +19,6 @@ EXPOSE 9000
 # REST
 EXPOSE 9001
 
-ENV FULL_MODEL_NAME=ssdlite_mobilenet_v2_coco_2018_05_09
-ENV MODEL_BASE_PATH=/model
-RUN mkdir -p ${MODEL_BASE_PATH}
-
-WORKDIR /model
-RUN curl -LO http://download.tensorflow.org/models/object_detection/${FULL_MODEL_NAME}.tar.gz && \
-    tar -xvzf ${FULL_MODEL_NAME}.tar.gz && \
-    rm -rf ${FULL_MODEL_NAME}.tar.gz && \
-    cd ${FULL_MODEL_NAME} && \
-    mv saved_model 1
-
-COPY annotation_predictor/models/accept_prob_predictor ./accept_prob_predictor
 COPY docker/model.conf .
 
 ENTRYPOINT tensorflow_model_server --model_config_file=model.conf --port=9000 --rest_api_port=9001
