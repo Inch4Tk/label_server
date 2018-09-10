@@ -64,7 +64,7 @@ function compute_iou(annotation, prediction) {
 
     let ann_area = (annotation[2] - annotation[0]) * (annotation[3] - annotation[1]);
     let pred_area = (prediction['XMax'] - prediction['XMin']) *
-                    (prediction['YMax'] - prediction['YMin']);
+        (prediction['YMax'] - prediction['YMin']);
 
     return intersection_area / (ann_area + pred_area - intersection_area);
 }
@@ -172,18 +172,25 @@ class LabelInterface extends React.Component {
                     boxes[i][j] = boxes[i][j] / resize_factor;
                 }
             }
+
+            let url = '/api/save_labels/' + this.task_id + '/';
             let postData = JSON.stringify({
                 'classes': classes,
                 'boxes': boxes,
                 'width': this.image.width,
                 'height': this.image.height
             });
-            let request = new XMLHttpRequest();
-            let url = '/api/save_labels/' + this.task_id + '/';
-            let shouldBeAsync = true;
-            request.open('POST', url, shouldBeAsync);
-            request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-            request.send(postData);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8",
+                },
+                body: postData
+            })
+                .then(
+                    response => response.json(),
+                    error => console.log('An error occurred.', error))
         }
 
         let request = new XMLHttpRequest();
