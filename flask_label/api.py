@@ -31,6 +31,49 @@ def batch_statistics(batch):
 
     return (len(batch["tasks"]), lc)
 
+def read_labels_from_xml(path):
+    """
+    Reads in an xml-file containing labels for an image and transforms it to a json.
+
+    Returns:
+        width: width of the respective image of the label
+        height: height of the respective image of the label
+        classes: classes of annotated objects
+        boxes: position of annotated objects
+    """
+
+    width = '-1'
+    height = '-1'
+    classes = []
+    boxes = []
+
+    if os.path.exists(path):
+        tree = ET.parse(path)
+        root = tree.getroot()
+        for name in root.findall('./size/width'):
+            width = name.text
+
+        for name in root.findall('./size/height'):
+            height = name.text
+
+        for name in root.findall('./object/name'):
+            classes.append(name.text)
+
+        for i, xmin in enumerate(root.findall('./object/bndbox/xmin')):
+            boxes.append([])
+            boxes[i].append(int(xmin.text, 10))
+
+        for i, ymin in enumerate(root.findall('./object/bndbox/ymin')):
+            boxes[i].append(int(ymin.text, 10))
+
+        for i, xmax in enumerate(root.findall('./object/bndbox/xmax')):
+            boxes[i].append(int(xmax.text, 10))
+
+        for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
+            boxes[i].append(int(ymax.text, 10))
+
+    return width, height, classes, boxes
+
 @bp.route("/batches/")
 @api_login_required
 def batches():
@@ -102,60 +145,36 @@ def serve_image(img_id):
     current_app.logger.info(os.path.join(img_path, img_task.filename))
     return send_from_directory(img_path, img_task.filename)
 
-@bp.route("/serve_labels/<int:img_id>/")
+@bp.route("/labels/")
 @api_login_required
-def serve_labels(img_id):
-    """Serves labels from an xml-file for an image from the instance folder
+def labels():
+    """Serves labels for all images from the instance folder"""
+    labels = []
+    img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
+    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    for batch in image_batch_data:
+        for task in batch['tasks']:
+            img_task = ImageTask.query.filter_by(id=task['id']).first()
 
-    Args:
-        img_id (int): Is the same as task id, since every task is matched to one image.
-    """
+            path = os.path.join(
+                current_app.instance_path,
+                current_app.config['IMAGE_DIR'],
+                img_task.batch.dirname,
+                current_app.config['IMAGE_LABEL_SUBDIR'],
+                img_task.filename
+            )
+            base = os.path.splitext(path)[0]
+            path = base + '.xml'
 
-    classes = []
-    boxes = []
+            width, height, classes, boxes = read_labels_from_xml(path)
 
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+            labels.append({'id': str(task['id']),
+                           'classes': classes,
+                           'boxes': boxes,
+                           'width': width,
+                           'height': height})
 
-    path = os.path.join(
-        current_app.instance_path,
-        current_app.config['IMAGE_DIR'],
-        img_task.batch.dirname,
-        current_app.config['IMAGE_LABEL_SUBDIR'],
-        img_task.filename
-    )
-
-    base = os.path.splitext(path)[0]
-    path = base + '.xml'
-    width = 0
-    height = 0
-
-    if os.path.exists(path):
-        tree = ET.parse(path)
-        root = tree.getroot()
-
-        for name in root.findall('./size/width'):
-            width = name.text
-
-        for name in root.findall('./size/height'):
-            height = name.text
-
-        for name in root.findall('./object/name'):
-            classes.append(name.text)
-
-        for i, xmin in enumerate(root.findall('./object/bndbox/xmin')):
-            boxes.append([])
-            boxes[i].append(int(xmin.text, 10))
-
-        for i, ymin in enumerate(root.findall('./object/bndbox/ymin')):
-            boxes[i].append(int(ymin.text, 10))
-
-        for i, xmax in enumerate(root.findall('./object/bndbox/xmax')):
-            boxes[i].append(int(xmax.text, 10))
-
-        for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
-            boxes[i].append(int(ymax.text, 10))
-
-    return jsonify({'classes': classes, 'boxes': boxes, 'width': width, 'height': height})
+    return jsonify(labels)
 
 @bp.route('/save_labels/<int:img_id>/', methods=['POST'])
 @api_login_required
@@ -253,9 +272,8 @@ def get_prediction(img_id):
         for i, pred in enumerate(acceptance_prediction):
             prediction[i]['acceptance_prediction'] = pred
             prediction[i]['LabelName'] = class_reader.get_class_from_id(prediction[i]['LabelName'])
-        prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True,)
+        prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True, )
     return jsonify(prediction)
-
 
 @bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
 @api_login_required

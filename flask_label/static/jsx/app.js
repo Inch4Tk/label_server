@@ -16,10 +16,12 @@ import thunkMiddleware from 'redux-thunk'
 import {Provider} from 'react-redux'
 import {applyMiddleware, createStore} from "redux"
 import rootReducer from "./reducers";
-import {fetchBatches} from "./actions";
+import {fetchBatches, fetchLabels} from "./actions";
 
 const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
+
 store.dispatch(fetchBatches());
+store.dispatch(fetchLabels());
 
 // All our routes
 const routes = [

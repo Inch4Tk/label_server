@@ -107,42 +107,37 @@ class LabelInterface extends React.Component {
         this.props.update_store();
         document.addEventListener('keydown', this.handle_keypress);
 
-        let {task} = this.props;
+        let labels = this.props.labels;
+        let task = this.props.task;
         this.task_id = task.id;
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
         let res_fac = undefined;
 
-        fetch("/api/serve_labels/" + task.id + "/")
+        for (let i = 0; i < labels.boxes.length; i++) {
+            res_fac = compute_resize_factor(parseInt(labels.width, 10),
+                parseInt(labels.height, 10));
+            deleted.push(false);
+            for (let j = 0; j < labels.boxes[i].length; j++) {
+                labels.boxes[i][j] = labels.boxes[i][j] * res_fac;
+            }
+        }
+        fetch("/api/get_prediction/" + task.id + "/")
             .then(
                 response => response.json(),
                 error => console.log('An error occurred.', error))
-            .then(json => {
-                for (let i = 0; i < json.boxes.length; i++) {
-                    res_fac = compute_resize_factor(parseInt(json.width, 10),
-                        parseInt(json.height, 10));
-                    deleted.push(false);
-                    for (let j = 0; j < json.boxes[i].length; j++) {
-                        json.boxes[i][j] = json.boxes[i][j] * res_fac;
-                    }
-                }
-                fetch("/api/get_prediction/" + task.id + "/")
-                    .then(
-                        response => response.json(),
-                        error => console.log('An error occurred.', error))
-                    .then(pred => {
-                        let open_pred = get_open_prediction(pred);
-                        this.image = image;
-                        this.setState({
-                            classes: json.classes,
-                            boxes: json.boxes,
-                            deleted: deleted,
-                            user_input: [undefined, undefined, undefined, undefined],
-                            predictions: pred,
-                            instructions: get_instructions(open_pred),
-                            redirect: undefined,
-                        });
-                    });
+            .then(pred => {
+                let open_pred = get_open_prediction(pred);
+                this.image = image;
+                this.setState({
+                    classes: labels.classes,
+                    boxes: labels.boxes,
+                    deleted: deleted,
+                    user_input: [undefined, undefined, undefined, undefined],
+                    predictions: pred,
+                    instructions: get_instructions(open_pred),
+                    redirect: undefined,
+                });
             });
     }
 
@@ -325,7 +320,7 @@ class LabelInterface extends React.Component {
         else if (kc === 85 && pred_index > 0) {
             delete predictions[pred_index - 1]['was_successful'];
 
-            if (predictions[pred_index -1].hasOwnProperty('label_index')) {
+            if (predictions[pred_index - 1].hasOwnProperty('label_index')) {
                 let label_index = predictions[pred_index - 1]['label_index'];
                 newState.classes.splice(label_index, 1);
                 newState.boxes.splice(label_index, 1);
