@@ -260,7 +260,9 @@ class LabelInterface extends React.Component {
         let width = this.image.width;
         let height = this.image.height;
         let res_fac = compute_resize_factor(width, height);
-        let pred = get_open_prediction(newState.predictions);
+        let predictions = newState.predictions;
+        let pred = get_open_prediction(predictions);
+        let pred_index = pred ? predictions.indexOf(pred) : predictions.length;
 
         //Q: backwards
         if (kc === 81 && task_ids.includes(task.id - 1)) {
@@ -304,7 +306,7 @@ class LabelInterface extends React.Component {
             let open_tasks_ids = batch.tasks.filter(
                 (t) => !t.is_labeled).map((t) => t.id);
             let current_index = open_tasks_ids.indexOf(task.id);
-            let new_task_id = open_tasks_ids[(current_index+1) % open_tasks_ids.length];
+            let new_task_id = open_tasks_ids[(current_index + 1) % open_tasks_ids.length];
             newState.redirect = "/label_images/" + batch.id + "/" + new_task_id;
         }
 
@@ -312,6 +314,21 @@ class LabelInterface extends React.Component {
         else if (kc > 48 && kc < 58 && newState.classes.length >= (kc - 48)) {
             newState.deleted[kc - 49] = !newState.deleted[kc - 49];
             this.has_changed = true;
+        }
+
+        //U: undo last task completion
+        else if (kc === 85 && pred_index > 0) {
+            delete predictions[pred_index - 1]['was_successful'];
+
+            if (predictions[pred_index -1].hasOwnProperty('label_index')) {
+                let label_index = predictions[pred_index - 1]['label_index'];
+                newState.classes.splice(label_index, 1);
+                newState.boxes.splice(label_index, 1);
+                newState.deleted.splice(label_index, 1);
+                delete predictions[pred_index - 1]['label_index']
+            }
+            let open_pred = get_open_prediction(predictions);
+            newState.instructions = get_instructions(open_pred);
         }
 
         else if (pred) {
@@ -326,16 +343,17 @@ class LabelInterface extends React.Component {
             else if (kc === 86 && pred['acceptance_prediction'] === 1) {
                 this.has_changed = true;
                 pred['was_successful'] = true;
-
+                pred['label_index'] = newState.classes.length;
                 newState.classes.push(pred['LabelName']);
-                newState.boxes.push([pred['XMin'] * res_fac * width,
+                newState.boxes.push([
+                    pred['XMin'] * res_fac * width,
                     pred['YMin'] * res_fac * height,
                     pred['XMax'] * res_fac * width,
                     pred['YMax'] * res_fac * height]);
                 newState.deleted.push(false)
             }
 
-            newState.instructions = get_instructions(get_open_prediction(newState.predictions));
+            newState.instructions = get_instructions(get_open_prediction(predictions));
         }
         this.setState({
             classes: newState.classes,
@@ -450,6 +468,7 @@ class LabelInterface extends React.Component {
             b[3] = b[3] / res_fac / height;
             let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === c);
             pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
+            pred['label_index'] = newState.classes.length;
             let new_pred = get_open_prediction(newState.predictions);
             newState.instructions = get_instructions(new_pred);
         }

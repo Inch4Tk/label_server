@@ -65,13 +65,19 @@ const routes = [
                 </li>
                 <li>
                     When you are finished, press "e" to get to the next image, "q" to get to the
-                    image before or "r" to get to a random non-annotated image. You can also use the
+                    image before or "r" to get to the next non-annotated image. You can also use the
                     file-navigator on the left
                 </li>
                 <li>
                     You can always delete an annotation by clicking on its label on the right or by
                     pressing the corresponding number on your keyboard. In the same way you can also
                     restore any annotation
+                </li>
+                <li>
+                    You can always redo the last task by pressing "u". This works multiple times.
+                    Note that this also deletes the respective annotation.
+                    This does not work for non-detected objects that you annotated. For this,
+                    use the delete mechanism instead.
                 </li>
             </ol>)
     },
