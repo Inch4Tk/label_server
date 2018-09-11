@@ -305,8 +305,13 @@ class LabelInterface extends React.Component {
         else if (kc === 82) {
             let open_tasks_ids = batch.tasks.filter(
                 (t) => !t.is_labeled).map((t) => t.id);
-            let current_index = open_tasks_ids.indexOf(task.id);
-            let new_task_id = open_tasks_ids[(current_index + 1) % open_tasks_ids.length];
+            let new_task_id = open_tasks_ids[0];
+            for (let i = 0; i < open_tasks_ids.length; i++) {
+                if (open_tasks_ids[i] > task.id) {
+                    new_task_id = open_tasks_ids[i];
+                    break;
+                }
+            }
             newState.redirect = "/label_images/" + batch.id + "/" + new_task_id;
         }
 
