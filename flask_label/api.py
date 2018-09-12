@@ -74,6 +74,44 @@ def read_labels_from_xml(path):
 
     return width, height, classes, boxes
 
+def save_labels_to_xml(data, path):
+    """
+    Save labels in data to xml-file specified by path or deletes the file, when data is empty.
+
+    Args:
+        data: dict containing the label data
+        path: path to xml-file where the labels will be saved
+    """
+
+    classes = data['classes']
+    boxes = data['boxes']
+    width = data['width']
+    height = data['height']
+    if len(classes) != 0:
+        root = ET.Element('annotation')
+
+        size = ET.SubElement(root, 'size')
+        ET.SubElement(size, 'width').text = str(width)
+        ET.SubElement(size, 'height').text = str(height)
+
+        for i, c in enumerate(classes):
+            obj = ET.SubElement(root, 'object')
+            ET.SubElement(obj, 'name').text = c
+            box = ET.SubElement(obj, 'bndbox')
+            ET.SubElement(box, 'xmin').text = str(round(boxes[i][0]))
+            ET.SubElement(box, 'ymin').text = str(round(boxes[i][1]))
+            ET.SubElement(box, 'xmax').text = str(round(boxes[i][2]))
+            ET.SubElement(box, 'ymax').text = str(round(boxes[i][3]))
+
+        rough_str = ET.tostring(root)
+        pretty_str = minidom.parseString(rough_str).toprettyxml(indent="  ")
+
+        with open(path, 'w') as f:
+            f.write(pretty_str)
+
+    elif os.path.exists(path):
+        os.remove(path)
+
 @bp.route("/batches/")
 @api_login_required
 def batches():
@@ -186,10 +224,6 @@ def save_labels(img_id):
     """
 
     data = request.get_json()
-    classes = data['classes']
-    boxes = data['boxes']
-    width = data['width']
-    height = data['height']
 
     img_task = ImageTask.query.filter_by(id=img_id).first()
 
@@ -206,30 +240,7 @@ def save_labels(img_id):
     base = os.path.splitext(file_path)[0]
     file_path = base + '.xml'
 
-    if len(classes) != 0:
-        root = ET.Element('annotation')
-
-        size = ET.SubElement(root, 'size')
-        ET.SubElement(size, 'width').text = str(width)
-        ET.SubElement(size, 'height').text = str(height)
-
-        for i, c in enumerate(classes):
-            obj = ET.SubElement(root, 'object')
-            ET.SubElement(obj, 'name').text = c
-            box = ET.SubElement(obj, 'bndbox')
-            ET.SubElement(box, 'xmin').text = str(round(boxes[i][0]))
-            ET.SubElement(box, 'ymin').text = str(round(boxes[i][1]))
-            ET.SubElement(box, 'xmax').text = str(round(boxes[i][2]))
-            ET.SubElement(box, 'ymax').text = str(round(boxes[i][3]))
-
-        rough_str = ET.tostring(root)
-        pretty_str = minidom.parseString(rough_str).toprettyxml(indent="  ")
-
-        with open(file_path, 'w') as f:
-            f.write(pretty_str)
-
-    elif os.path.exists(file_path):
-        os.remove(file_path)
+    save_labels_to_xml(data, file_path)
 
     db_update_task()
 
