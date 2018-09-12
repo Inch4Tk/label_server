@@ -29,7 +29,7 @@ def compute_feature_vector(detections: list, position: int) -> list:
     rel_size = get_rel_size(detection)
     avg = get_avg_score(detections)
     avg_dif = score - avg
-    max_dif = score - get_max_score(detections)
+    max_dif = get_max_score(detections) - score
     class_index = class_reader.get_index_of_class(detection['LabelName'])
     one_hot_encoding = np.zeros(len(class_reader.class_ids))
     one_hot_encoding[class_index] = 1
