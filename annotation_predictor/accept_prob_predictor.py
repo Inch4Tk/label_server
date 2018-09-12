@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import OutOfRangeError
-from tensorflow.python.saved_model import tag_constants
+from tensorflow.python.saved_model import tag_constants, signature_constants
 
 from annotation_predictor.util.settings import model_dir
 from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
@@ -44,7 +44,7 @@ def prob_model(x):
     y = tf.layers.dense(
         inputs=dense5,
         units=1,
-        activation=tf.nn.sigmoid
+        activation=tf.nn.sigmoid,
     )
 
     return y
@@ -73,8 +73,8 @@ def main(mode: str, detections=None):
     actual_checkpoint = len(existent_checkpoints)
     new_checkpoint = str(actual_checkpoint + 1)
     actual_checkpoint = str(actual_checkpoint)
-    actual_checkpoint_dir = os.path.join(model_dir, 'accept_prob_predictor', actual_checkpoint)
-    new_checkpoint_dir = os.path.join(model_dir, 'accept_prob_predictor', new_checkpoint)
+    actual_checkpoint_dir = os.path.join(accept_prob_model_dir, actual_checkpoint)
+    new_checkpoint_dir = os.path.join(accept_prob_model_dir, new_checkpoint)
 
     if FLAGS and FLAGS.mode == 'train':
         _y = tf.placeholder(tf.float32, [None, 1])
@@ -127,8 +127,7 @@ def main(mode: str, detections=None):
             sess.run(init_op)
 
             if new_checkpoint != '1':
-                saver.restore(sess, os.path.join(accept_prob_model_dir, actual_checkpoint,
-                                                 'prob_predictor.ckpt'))
+                saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
 
             prediction_input = tf.saved_model.utils.build_tensor_info(x)
             prediction_output = tf.saved_model.utils.build_tensor_info(y)
@@ -144,7 +143,8 @@ def main(mode: str, detections=None):
             builder.add_meta_graph_and_variables(
                 sess,
                 [tag_constants.SERVING],
-                signature_def_map={'predict_accept_prob': prediction_signature},
+                signature_def_map={
+                    signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: prediction_signature},
                 legacy_init_op=legacy_init_op)
 
             coord = tf.train.Coordinator()
