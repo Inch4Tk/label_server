@@ -1,6 +1,7 @@
 import {combineReducers} from "redux"
 import batches from "./batches"
 import labels from "./labels"
+import predictions from "./predictions"
 
 // HOW STATE TREE LOOKS LIKE
 const example_state = {
@@ -29,7 +30,7 @@ const example_state = {
         ]
     },
     labels: {
-        isFetching: true,
+        isFetching: false,
         annotations: [
             {
                 id: 42,
@@ -38,6 +39,24 @@ const example_state = {
                     boxes: [0.1, 0.2, 0.3, 0.4],
                     width: 1920,
                     height: 1080
+                }
+            }
+        ]
+    },
+    predictions: {
+        isFetching: false,
+        pred: [
+            {
+                id: 42,
+                predictions: {
+                    Confidence: 0.8,
+                    LabelName: 'Person',
+                    XMax: 0.3,
+                    XMin: 0.5,
+                    YMax: 0.2,
+                    YMin: 0.4,
+                    acceptance_prediction: false,
+                    was_successful: true
                 }
             }
         ]
@@ -50,5 +69,5 @@ const example_state = {
 
 
 export default combineReducers({
-    batches, labels
+    batches, labels, predictions
 })

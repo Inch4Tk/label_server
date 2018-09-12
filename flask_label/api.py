@@ -4,15 +4,15 @@ import random
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
-import numpy as np
 from flask import (
     Blueprint, current_app, send_from_directory, jsonify, request
 )
 
-from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.class_reader import ClassReader
+from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
 from annotation_predictor.util.settings import class_ids_oid_file
+from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
 from flask_label.database import db
 from flask_label.database_cli import db_update_task
@@ -246,45 +246,63 @@ def save_labels(img_id):
 
     return jsonify(success=True)
 
-@bp.route('/get_prediction/<int:img_id>/')
+@bp.route('/predictions/')
 @api_login_required
-def get_prediction(img_id):
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+def predictions():
+    """Serves predictions for all images from the instance folder"""
+    predictions = []
+    img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
+    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    for batch in image_batch_data:
+        for task in batch['tasks']:
+            img_task = ImageTask.query.filter_by(id=task['id']).first()
 
-    img_path = os.path.join(
-        current_app.instance_path,
-        current_app.config["IMAGE_DIR"],
-        img_task.batch.dirname,
-        img_task.filename
-    )
-    json_path = os.path.join(
-        current_app.instance_path,
-        current_app.config["IMAGE_DIR"],
-        img_task.batch.dirname,
-        current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
-        img_task.filename
-    )
-    base = os.path.splitext(json_path)[0]
-    json_path = base + '.json'
+            img_path = os.path.join(
+                current_app.instance_path,
+                current_app.config["IMAGE_DIR"],
+                img_task.batch.dirname,
+                img_task.filename
+            )
+            pred_path = os.path.join(
+                current_app.instance_path,
+                current_app.config["IMAGE_DIR"],
+                img_task.batch.dirname,
+                current_app.config['IMAGE_PREDICTIONS_SUBDIR'])
 
-    if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
-            prediction = json.load(f)
-        return jsonify(prediction)
+            json_path = os.path.join(
+                pred_path,
+                img_task.filename
+            )
 
-    prediction = send_od_request(img_path)
-    acceptance_prediction = accept_prob_predictor.main('predict', prediction)
+            base = os.path.splitext(json_path)[0]
+            json_path = base + '.json'
 
-    prediction = list(prediction.values())[0]
-    acceptance_prediction = np.squeeze(acceptance_prediction, axis=1).tolist()
-    if len(prediction) > 0:
-        class_reader = ClassReader(class_ids_oid_file)
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    predictions.append({'id': str(task['id']), 'predictions': json.load(f)})
+            else:
+                prediction = send_od_request(img_path)
+                prediction = list(prediction.values())[0]
+                if len(prediction) > 0:
+                    feature_vectors = []
+                    for i, _ in enumerate(prediction):
+                        feature_vectors.append(compute_feature_vector(prediction, i))
+                    acceptance_prediction = send_accept_prob_request(feature_vectors)
 
-        for i, pred in enumerate(acceptance_prediction):
-            prediction[i]['acceptance_prediction'] = pred
-            prediction[i]['LabelName'] = class_reader.get_class_from_id(prediction[i]['LabelName'])
-        prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True, )
-    return jsonify(prediction)
+                    class_reader = ClassReader(class_ids_oid_file)
+                    for i, p in enumerate(acceptance_prediction):
+                        prediction[i]['acceptance_prediction'] = p
+                        prediction[i]['LabelName'] = class_reader.get_class_from_id(
+                            prediction[i]['LabelName'])
+                    prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True)
+
+                predictions.append({'id': str(task['id']), 'predictions': prediction})
+
+                if not os.path.exists(pred_path):
+                    os.mkdir(pred_path)
+                with open(json_path, 'w') as f:
+                    json.dump(prediction, f)
+    return jsonify(predictions)
 
 @bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
 @api_login_required

@@ -107,9 +107,10 @@ class LabelInterface extends React.Component {
         this.props.update_store();
         document.addEventListener('keydown', this.handle_keypress);
 
-        let labels = this.props.labels;
         let task = this.props.task;
         this.task_id = task.id;
+        let labels = this.props.labels;
+        let predictions = this.props.predictions;
         let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
         let res_fac = undefined;
@@ -122,23 +123,17 @@ class LabelInterface extends React.Component {
                 labels.boxes[i][j] = labels.boxes[i][j] * res_fac;
             }
         }
-        fetch("/api/get_prediction/" + task.id + "/")
-            .then(
-                response => response.json(),
-                error => console.log('An error occurred.', error))
-            .then(pred => {
-                let open_pred = get_open_prediction(pred);
-                this.image = image;
-                this.setState({
-                    classes: labels.classes,
-                    boxes: labels.boxes,
-                    deleted: deleted,
-                    user_input: [undefined, undefined, undefined, undefined],
-                    predictions: pred,
-                    instructions: get_instructions(open_pred),
-                    redirect: undefined,
-                });
-            });
+        let open_pred = get_open_prediction(predictions);
+        this.image = image;
+        this.setState({
+            classes: labels.classes,
+            boxes: labels.boxes,
+            deleted: deleted,
+            user_input: [undefined, undefined, undefined, undefined],
+            predictions: predictions,
+            instructions: get_instructions(open_pred),
+            redirect: undefined,
+        });
     }
 
     componentWillUnmount() {

@@ -14,12 +14,17 @@ function getLabelsWithId(state, id) {
     return state.labels.annotations.find(x => x.id == id)
 }
 
+function getPredictionsWithId(state, id) {
+    return state.predictions.pred.find(x => x.id == id).predictions
+}
+
 const mapStateToProps = (state, {match} ) => {
     return {
         key: match.params.task_id,
         batch: getBatchWithId(state, match.params.batch_id),
         task: getTaskWithId(state, match.params.batch_id, match.params.task_id),
-        labels: getLabelsWithId(state, match.params.task_id)
+        labels: getLabelsWithId(state, match.params.task_id),
+        predictions: getPredictionsWithId(state, match.params.task_id)
     };
 };
 

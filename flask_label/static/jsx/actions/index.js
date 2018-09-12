@@ -22,6 +22,17 @@ const receiveLabels = (data) => ({
     data: data
 });
 
+export const REQUEST_PREDICTIONS = "REQUEST_PREDICTIONS";
+const requestPredictions = () => ({
+    type: REQUEST_PREDICTIONS,
+});
+
+export const RECEIVE_PREDICTIONS = "RECEIVE_PREDICTIONS";
+const receivePredictions = (data) => ({
+    type: RECEIVE_PREDICTIONS,
+    data: data
+});
+
 export function fetchBatches() {
     // Async call to /api/batches, using thunk middleware (aka returning a function)
     return function (dispatch) {
@@ -43,5 +54,17 @@ export function fetchLabels() {
                 response => response.json(),
                 error => console.log('An error occurred.', error))
             .then(json => dispatch(receiveLabels(json)))
+    }
+}
+
+export function fetchPredictions() {
+    // Async call to /api/predictions, using thunk middleware (aka returning a function)
+    return function (dispatch) {
+        dispatch(requestPredictions());
+        return fetch("/api/predictions/")
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error))
+            .then(json => dispatch(receivePredictions(json)))
     }
 }

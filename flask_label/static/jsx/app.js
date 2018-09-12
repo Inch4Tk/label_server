@@ -16,12 +16,7 @@ import thunkMiddleware from 'redux-thunk'
 import {Provider} from 'react-redux'
 import {applyMiddleware, createStore} from "redux"
 import rootReducer from "./reducers";
-import {fetchBatches, fetchLabels} from "./actions";
-
-const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
-
-store.dispatch(fetchBatches());
-store.dispatch(fetchLabels());
+import {fetchBatches, fetchLabels, fetchPredictions} from "./actions";
 
 // All our routes
 const routes = [
@@ -112,13 +107,35 @@ const App = () => (
     </div>
 );
 
-// Put the SPA to the document root
+const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
 let doc_root = document.getElementById("react-root");
+
+// Loading screen while fetching data
 ReactDOM.render(
     <Provider store={store}>
         <Router>
-            <App/>
+            <h1>Loading App. Please Wait</h1>
         </Router>
     </Provider>,
     doc_root
 );
+
+// Fetch information about image/video-batches, already existing labels, object- and annotation-
+// predictions
+Promise.all([
+    store.dispatch(fetchBatches()),
+    store.dispatch(fetchLabels()),
+    store.dispatch(fetchPredictions())
+]).then(() => {
+    console.log('Initialized store');
+
+    // Put the SPA to the document root
+    ReactDOM.render(
+        <Provider store={store}>
+            <Router>
+                <App/>
+            </Router>
+        </Provider>,
+        doc_root
+    );
+});
