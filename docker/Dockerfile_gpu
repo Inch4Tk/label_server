@@ -122,4 +122,4 @@ EXPOSE 9001
 
 COPY docker/model.conf .
 
-ENTRYPOINT tensorflow_model_server --port=9000 --rest_api_port=9001 --model_config_file=model.conf --per_process_gpu_memory_fraction=0.75
+ENTRYPOINT tensorflow_model_server --port=9000 --rest_api_port=9001 --model_config_file=model.conf --per_process_gpu_memory_fraction=0.75 --enable_batching

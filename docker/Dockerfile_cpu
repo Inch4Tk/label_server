@@ -21,4 +21,4 @@ EXPOSE 9001
 
 COPY docker/model.conf .
 
-ENTRYPOINT tensorflow_model_server --model_config_file=model.conf --port=9000 --rest_api_port=9001
+ENTRYPOINT tensorflow_model_server --model_config_file=model.conf --port=9000 --rest_api_port=9001 --enable_batching
