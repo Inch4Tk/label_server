@@ -50,7 +50,7 @@ export function fetchLabels() {
     // Async call to /api/labels, using thunk middleware (aka returning a function)
     return function (dispatch) {
         dispatch(requestLabels());
-        return fetch("/api/labels/")
+        return fetch("/api/serve_labels/")
             .then(
                 response => response.json(),
                 error => console.log('An error occurred.', error))
@@ -62,7 +62,7 @@ export function fetchPredictions() {
     // Async call to /api/predictions, using thunk middleware (aka returning a function)
     return function (dispatch) {
         dispatch(requestPredictions());
-        return fetch("/api/predictions/")
+        return fetch("/api/serve_predictions/")
             .then(
                 response => response.json(),
                 error => console.log('An error occurred.', error))
@@ -84,7 +84,7 @@ export function updateStore(batch, id, labels, predictions) {
     label['height'] = labels['height'];
     state.predictions.pred.find(x => x.id == id).predictions = predictions;
 
-    return {type: 'SAVE_DATA', state: state}
+    return {type: 'UPDATE_STORE', state: state}
 }
 
 export function updateBackend(id, labels, predictions) {
@@ -97,7 +97,7 @@ export function updateBackend(id, labels, predictions) {
         body: JSON.stringify(labels)
     })
         .then(
-            response => console.log(response.status, response.statusText, ': ', response.url)
+            response => console.log(response.status, response.statusText, ':', response.url)
         );
 
     fetch('/api/save_predictions/' + id + '/', {
@@ -111,6 +111,5 @@ export function updateBackend(id, labels, predictions) {
             response => console.log(response.status, response.statusText, ': ', response.url)
         );
 
-    return {type: 'SAVE_DATA', state: store.getState()}
-
+    return {type: 'UPDATE_BACKEND', state: store.getState()}
 }

@@ -183,9 +183,9 @@ def serve_image(img_id):
     current_app.logger.info(os.path.join(img_path, img_task.filename))
     return send_from_directory(img_path, img_task.filename)
 
-@bp.route("/labels/")
+@bp.route("/serve_labels/")
 @api_login_required
-def labels():
+def serve_labels():
     """Serves labels for all images from the instance folder"""
     labels = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
@@ -246,9 +246,9 @@ def save_labels(img_id):
 
     return jsonify(success=True)
 
-@bp.route('/predictions/')
+@bp.route('/serve_predictions/')
 @api_login_required
-def predictions():
+def serve_predictions():
     """Serves predictions for all images from the instance folder"""
     predictions = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
