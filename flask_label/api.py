@@ -31,6 +31,49 @@ def batch_statistics(batch):
 
     return (len(batch["tasks"]), lc)
 
+def get_path_to_image(img_id):
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    img_path = os.path.join(
+        current_app.instance_path,
+        current_app.config["IMAGE_DIR"],
+        img_task.batch.dirname,
+        img_task.filename
+    )
+
+    return img_path
+
+def get_path_to_label(img_id):
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    path = os.path.join(
+        current_app.instance_path,
+        current_app.config['IMAGE_DIR'],
+        img_task.batch.dirname,
+        current_app.config['IMAGE_LABEL_SUBDIR'],
+        img_task.filename
+    )
+    base = os.path.splitext(path)[0]
+    path = base + '.xml'
+
+    return path
+
+def get_path_to_prediction(img_id):
+    img_task = ImageTask.query.filter_by(id=img_id).first()
+
+    pred_dir_path = os.path.join(
+        current_app.instance_path,
+        current_app.config["IMAGE_DIR"],
+        img_task.batch.dirname,
+        current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
+        img_task.filename
+    )
+
+    base = os.path.splitext(pred_dir_path)[0]
+    pred_path = base + '.json'
+
+    return pred_path
+
 def read_labels_from_xml(path):
     """
     Reads in an xml-file containing labels for an image and transforms it to a json.
@@ -172,16 +215,12 @@ def serve_image(img_id):
     Args:
         img_id (int): Is the same as task id, since every task is matched to one image.
     """
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+    img_path = get_path_to_image(img_id)
 
-    img_path = os.path.join(
-        current_app.instance_path,
-        current_app.config["IMAGE_DIR"],
-        img_task.batch.dirname
-    )
+    current_app.logger.info(img_path)
 
-    current_app.logger.info(os.path.join(img_path, img_task.filename))
-    return send_from_directory(img_path, img_task.filename)
+    path, file = os.path.split(img_path)
+    return send_from_directory(path, file)
 
 @bp.route("/serve_labels/")
 @api_login_required
@@ -192,19 +231,9 @@ def serve_labels():
     image_batch_data = image_batch_schema.dump(img_batches, many=True).data
     for batch in image_batch_data:
         for task in batch['tasks']:
-            img_task = ImageTask.query.filter_by(id=task['id']).first()
+            label_path = get_path_to_label(task['id'])
 
-            path = os.path.join(
-                current_app.instance_path,
-                current_app.config['IMAGE_DIR'],
-                img_task.batch.dirname,
-                current_app.config['IMAGE_LABEL_SUBDIR'],
-                img_task.filename
-            )
-            base = os.path.splitext(path)[0]
-            path = base + '.xml'
-
-            width, height, classes, boxes = read_labels_from_xml(path)
+            width, height, classes, boxes = read_labels_from_xml(label_path)
 
             labels.append({'id': str(task['id']),
                            'classes': classes,
@@ -225,22 +254,12 @@ def save_labels(img_id):
 
     data = request.get_json()
 
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+    label_path = get_path_to_label(img_id)
 
-    label_path = os.path.join(
-        current_app.instance_path,
-        current_app.config['IMAGE_DIR'],
-        img_task.batch.dirname,
-        current_app.config['IMAGE_LABEL_SUBDIR'],
-    )
-    if not os.path.exists(label_path):
+    if not os.path.exists(os.path.dirname(label_path)):
         os.mkdir(label_path)
 
-    file_path = os.path.join(label_path, img_task.filename)
-    base = os.path.splitext(file_path)[0]
-    file_path = base + '.xml'
-
-    save_labels_to_xml(data, file_path)
+    save_labels_to_xml(data, label_path)
 
     db_update_task()
 
@@ -255,30 +274,11 @@ def serve_predictions():
     image_batch_data = image_batch_schema.dump(img_batches, many=True).data
     for batch in image_batch_data:
         for task in batch['tasks']:
-            img_task = ImageTask.query.filter_by(id=task['id']).first()
+            img_path = get_path_to_image(task['id'])
+            pred_path = get_path_to_prediction(task['id'])
 
-            img_path = os.path.join(
-                current_app.instance_path,
-                current_app.config["IMAGE_DIR"],
-                img_task.batch.dirname,
-                img_task.filename
-            )
-            pred_path = os.path.join(
-                current_app.instance_path,
-                current_app.config["IMAGE_DIR"],
-                img_task.batch.dirname,
-                current_app.config['IMAGE_PREDICTIONS_SUBDIR'])
-
-            json_path = os.path.join(
-                pred_path,
-                img_task.filename
-            )
-
-            base = os.path.splitext(json_path)[0]
-            json_path = base + '.json'
-
-            if os.path.exists(json_path):
-                with open(json_path, 'r') as f:
+            if os.path.exists(pred_path):
+                with open(pred_path, 'r') as f:
                     predictions.append({'id': str(task['id']), 'predictions': json.load(f)})
             else:
                 prediction = send_od_request(img_path)
@@ -298,37 +298,28 @@ def serve_predictions():
 
                 predictions.append({'id': str(task['id']), 'predictions': prediction})
 
-                if not os.path.exists(pred_path):
-                    os.mkdir(pred_path)
-                with open(json_path, 'w') as f:
+                if not os.path.exists(os.path.dirname(pred_path)):
+                    os.mkdir(os.path.dirname(pred_path))
+                with open(pred_path, 'w') as f:
                     json.dump(prediction, f)
+
     return jsonify(predictions)
 
 @bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
 @api_login_required
 def save_predictions(img_id):
     predictions = request.get_json()
-    img_task = ImageTask.query.filter_by(id=img_id).first()
 
-    path = os.path.join(
-        current_app.instance_path,
-        current_app.config['IMAGE_DIR'],
-        img_task.batch.dirname,
-        current_app.config['IMAGE_PREDICTIONS_SUBDIR'],
-    )
+    pred_path = get_path_to_prediction(img_id)
 
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-    file_path = os.path.join(path, img_task.filename)
-    base = os.path.splitext(file_path)[0]
-    file_path = base + '.json'
+    if not os.path.exists(os.path.dirname(pred_path)):
+        os.mkdir(os.path.dirname(pred_path))
 
     result = []
     for p in predictions:
         result.append(p)
 
-    with open(file_path, 'w') as f:
+    with open(pred_path, 'w') as f:
         json.dump(result, f)
 
     return jsonify(success=True)
