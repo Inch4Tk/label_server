@@ -97,7 +97,7 @@ export function updateBackend(id, labels, predictions) {
         body: JSON.stringify(labels)
     })
         .then(
-            response => console.log(response)
+            response => console.log(response.status, response.statusText, ': ', response.url)
         );
 
     fetch('/api/save_predictions/' + id + '/', {
@@ -108,7 +108,7 @@ export function updateBackend(id, labels, predictions) {
         body: JSON.stringify(predictions)
     })
         .then(
-            response => console.log(response)
+            response => console.log(response.status, response.statusText, ': ', response.url)
         );
 
     return {type: 'SAVE_DATA', state: store.getState()}
