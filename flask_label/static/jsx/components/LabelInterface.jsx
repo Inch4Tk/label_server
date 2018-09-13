@@ -295,6 +295,7 @@ class LabelInterface extends React.Component {
 
         //U: undo last task completion
         else if (kc === 85 && pred_index > 0) {
+            this.has_changed = true;
             delete predictions[pred_index - 1]['was_successful'];
 
             if (predictions[pred_index - 1].hasOwnProperty('label_index')) {
