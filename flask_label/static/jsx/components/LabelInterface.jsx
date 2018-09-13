@@ -17,6 +17,11 @@ function render_filename(task, current_task) {
 function compute_resize_factor(img_width, img_height) {
     //Resize factor w.r.t. the canvas size (1200,800) s.t. image fits the canvas as well as possible
     //Add a border of width 10 in order to make clicks close to the boarder easier to handle
+
+    if (img_width < 1 || img_height < 1) {
+        return undefined;
+    }
+
     let resize_factor_width = 1180 / img_width;
     let resize_factor_height = 780 / img_height;
     return Math.min(resize_factor_width, resize_factor_height);
@@ -85,8 +90,9 @@ class LabelInterface extends React.Component {
         super(props);
         this.mouse_position = undefined;
         this.has_changed = false;
-        this.task_id = -1;
-        this.image = -1;
+        this.task_id = undefined;
+        this.image = undefined;
+        this.resize_factor = undefined;
         this.canvasRev = React.createRef();
         this.state = {
             classes: [],
@@ -104,27 +110,24 @@ class LabelInterface extends React.Component {
 
     componentDidMount() {
         console.log("Component did mount");
-        this.props.update_store();
         document.addEventListener('keydown', this.handle_keypress);
 
         let task = this.props.task;
         this.task_id = task.id;
+        this.image = this.load_image("/api/serve_image/" + task.id + "/");
         let labels = this.props.labels;
         let predictions = this.props.predictions;
-        let image = this.load_image("/api/serve_image/" + task.id + "/");
         let deleted = [];
-        let res_fac = undefined;
-
-        for (let i = 0; i < labels.boxes.length; i++) {
-            res_fac = compute_resize_factor(parseInt(labels.width, 10),
-                parseInt(labels.height, 10));
-            deleted.push(false);
-            for (let j = 0; j < labels.boxes[i].length; j++) {
-                labels.boxes[i][j] = labels.boxes[i][j] * res_fac;
+        if (labels.boxes.length > 0) {
+            this.resize_factor = compute_resize_factor(labels.width, labels.height);
+            for (let i = 0; i < labels.boxes.length; i++) {
+                deleted.push(false);
+                for (let j = 0; j < labels.boxes[i].length; j++) {
+                    labels.boxes[i][j] = labels.boxes[i][j] * this.resize_factor;
+                }
             }
         }
         let open_pred = get_open_prediction(predictions);
-        this.image = image;
         this.setState({
             classes: labels.classes,
             boxes: labels.boxes,
@@ -143,6 +146,7 @@ class LabelInterface extends React.Component {
             //do not save annotations that are deleted at this point
             let boxes = this.state.boxes;
             let classes = this.state.classes;
+            let prediction_data = this.state.predictions;
             let len = classes.length;
             let current = 0;
             for (let i = 0; i < len; i++) {
@@ -156,40 +160,21 @@ class LabelInterface extends React.Component {
             }
 
             //transform coordinates back to image size
-            let resize_factor = compute_resize_factor(this.image.width, this.image.height);
             for (let i = 0; i < boxes.length; i++) {
                 for (let j = 0; j < boxes[i].length; j++) {
-                    boxes[i][j] = boxes[i][j] / resize_factor;
+                    boxes[i][j] = boxes[i][j] / this.resize_factor;
                 }
             }
 
-            let url = '/api/save_labels/' + this.task_id + '/';
-            let postData = JSON.stringify({
+            let label_data = {
                 'classes': classes,
                 'boxes': boxes,
                 'width': this.image.width,
                 'height': this.image.height
-            });
+            };
 
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8",
-                },
-                body: postData
-            })
-                .then(
-                    response => response.json(),
-                    error => console.log('An error occurred.', error))
+            this.props.save_data(this.props.batch.id, this.task_id, label_data, prediction_data);
         }
-
-        let request = new XMLHttpRequest();
-        let url = '/api/save_predictions/' + this.task_id + '/';
-        let shouldBeAsync = true;
-        request.open('POST', url, shouldBeAsync);
-        request.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-        request.send(JSON.stringify(this.state.predictions));
-
     }
 
     handle_click(event) {
@@ -197,9 +182,8 @@ class LabelInterface extends React.Component {
         let ui = this.state.user_input;
         let img_width = this.image.width;
         let img_height = this.image.height;
-        let resize_factor = compute_resize_factor(img_width, img_height);
-        let new_width = img_width * resize_factor;
-        let new_height = img_height * resize_factor;
+        let new_width = img_width * this.resize_factor;
+        let new_height = img_height * this.resize_factor;
         let bounds = this.canvasRev.current.getBoundingClientRect();
         //handle clicks on border and map input to image coordinates
         let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
@@ -229,9 +213,8 @@ class LabelInterface extends React.Component {
         try {
             let img_width = this.image.width;
             let img_height = this.image.height;
-            let resize_factor = compute_resize_factor(img_width, img_height);
-            let new_width = img_width * resize_factor;
-            let new_height = img_height * resize_factor;
+            let new_width = img_width * this.resize_factor;
+            let new_height = img_height * this.resize_factor;
             let bounds = this.canvasRev.current.getBoundingClientRect();
             let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
             let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
@@ -249,7 +232,6 @@ class LabelInterface extends React.Component {
         let newState = this.state;
         let width = this.image.width;
         let height = this.image.height;
-        let res_fac = compute_resize_factor(width, height);
         let predictions = newState.predictions;
         let pred = get_open_prediction(predictions);
         let pred_index = pred ? predictions.indexOf(pred) : predictions.length;
@@ -341,10 +323,10 @@ class LabelInterface extends React.Component {
                 pred['label_index'] = newState.classes.length;
                 newState.classes.push(pred['LabelName']);
                 newState.boxes.push([
-                    pred['XMin'] * res_fac * width,
-                    pred['YMin'] * res_fac * height,
-                    pred['XMax'] * res_fac * width,
-                    pred['YMax'] * res_fac * height]);
+                    pred['XMin'] * this.resize_factor * width,
+                    pred['YMin'] * this.resize_factor * height,
+                    pred['XMax'] * this.resize_factor * width,
+                    pred['YMax'] * this.resize_factor * height]);
                 newState.deleted.push(false)
             }
 
@@ -370,9 +352,13 @@ class LabelInterface extends React.Component {
             let c = this.state.classes;
             let d = this.state.deleted;
             let p = get_open_prediction(this.state.predictions);
-            let resize_factor = compute_resize_factor(img_width, img_height);
-            let new_width = img_width * resize_factor;
-            let new_height = img_height * resize_factor;
+
+            if (this.resize_factor === undefined) {
+                this.resize_factor = compute_resize_factor(img_width, img_height);
+            }
+
+            let new_width = img_width * this.resize_factor;
+            let new_height = img_height * this.resize_factor;
             let colors = ['red', 'blue', 'orange', 'purple', 'brown', 'turquoise'];
             const ctx = this.canvasRev.current.getContext('2d');
             ctx.drawImage(this.image, 10, 10, new_width, new_height);
@@ -414,12 +400,11 @@ class LabelInterface extends React.Component {
 
                 let width = this.image.width;
                 let height = this.image.height;
-                let res_fac = compute_resize_factor(width, height);
                 //convert to absolute coordinates
-                let x_min = p['XMin'] * width * res_fac;
-                let x_max = p['XMax'] * width * res_fac;
-                let y_min = p['YMin'] * height * res_fac;
-                let y_max = p['YMax'] * height * res_fac;
+                let x_min = p['XMin'] * width * this.resize_factor;
+                let x_max = p['XMax'] * width * this.resize_factor;
+                let y_min = p['YMin'] * height * this.resize_factor;
+                let y_max = p['YMax'] * height * this.resize_factor;
 
                 ctx.fillText(p['LabelName'], x_min + 15, y_min + 30);
                 ctx.rect(x_min + 10, y_min + 10, x_max - x_min, y_max - y_min);
@@ -443,7 +428,6 @@ class LabelInterface extends React.Component {
         let ui = newState.user_input;
         let width = this.image.width;
         let height = this.image.height;
-        let res_fac = compute_resize_factor(width, height);
         let x_min = Math.min(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let x_max = Math.max(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let y_min = Math.min(ui[0][1], ui[1][1], ui[2][1], ui[3][1]);
@@ -457,10 +441,10 @@ class LabelInterface extends React.Component {
             c = pred['LabelName'];
             //get relative box coordinates i.o. to compute IoU
             let b = new_box.slice();
-            b[0] = b[0] / res_fac / width;
-            b[1] = b[1] / res_fac / width;
-            b[2] = b[2] / res_fac / height;
-            b[3] = b[3] / res_fac / height;
+            b[0] = b[0] / this.resize_factor / width;
+            b[1] = b[1] / this.resize_factor / width;
+            b[2] = b[2] / this.resize_factor / height;
+            b[3] = b[3] / this.resize_factor / height;
             let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === c);
             pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
             pred['label_index'] = newState.classes.length;
@@ -493,16 +477,15 @@ class LabelInterface extends React.Component {
         if (this.state.redirect) {
             return <Redirect push to={this.state.redirect}/>;
         }
-        console.log("rendering");
         let state = this.state;
         let {task, batch} = this.props;
+        let tasks = batch.tasks;
+
+        console.log("rendering");
         console.log(state);
 
-        if (this.image) {
-            this.render_image();
+        this.render_image();
 
-        }
-        let tasks = batch.tasks;
         let image_list = tasks.map((t) =>
             <li key={t.id}>
                 <Link to={"/label_images/" + batch.id + "/" + t.id}>

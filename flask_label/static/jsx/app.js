@@ -107,7 +107,7 @@ const App = () => (
     </div>
 );
 
-const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
+export const store = createStore(rootReducer, applyMiddleware(thunkMiddleware));
 let doc_root = document.getElementById("react-root");
 
 // Loading screen while fetching data

@@ -1,4 +1,5 @@
 import fetch from 'cross-fetch'
+import {store} from '../app'
 
 export const REQUEST_BATCHES = "REQUEST_BATCHES";
 const requestBatches = () => ({
@@ -67,4 +68,49 @@ export function fetchPredictions() {
                 error => console.log('An error occurred.', error))
             .then(json => dispatch(receivePredictions(json)))
     }
+}
+
+export function updateStore(batch, id, labels, predictions) {
+    // Save data to redux store
+    let state = store.getState();
+    let b = state.batches.imageBatches.find(x => x.id == batch);
+    let task = b.tasks.find(x => x.id == id);
+    let label = state.labels.annotations.find(x => x.id == id);
+
+    task['is_labeled'] = labels['boxes'].length > 0;
+    label['classes'] = labels['classes'];
+    label['boxes'] = labels['boxes'];
+    label['width'] = labels['width'];
+    label['height'] = labels['height'];
+    state.predictions.pred.find(x => x.id == id).predictions = predictions;
+
+    return {type: 'SAVE_DATA', state: state}
+}
+
+export function updateBackend(id, labels, predictions) {
+    // Save data to backend
+    fetch('/api/save_labels/' + id + '/', {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify(labels)
+    })
+        .then(
+            response => console.log(response)
+        );
+
+    fetch('/api/save_predictions/' + id + '/', {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify(predictions)
+    })
+        .then(
+            response => console.log(response)
+        );
+
+    return {type: 'SAVE_DATA', state: store.getState()}
+
 }
