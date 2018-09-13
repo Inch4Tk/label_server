@@ -3,6 +3,7 @@ import {LabelInterface} from "../components/LabelInterface.jsx";
 import {updateBackend, updateStore} from "../actions";
 
 function cloneObject(src) {
+    //clones an object by parsing all jsonifyable attributes and saving them in another object
     return JSON.parse(JSON.stringify(src));
 }
 
