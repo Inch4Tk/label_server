@@ -8,6 +8,7 @@ from flask import (
     Blueprint, current_app, send_from_directory, jsonify, request
 )
 
+from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.class_reader import ClassReader
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
@@ -321,5 +322,44 @@ def save_predictions(img_id):
 
     with open(pred_path, 'w') as f:
         json.dump(result, f)
+
+    return jsonify(success=True)
+
+@bp.route('/train_models/')
+@api_login_required
+def train_models():
+    """Checks instance folder for new training data and uses it to further train models"""
+    feature_vectors = []
+    y_ = []
+    img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
+    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    class_reader = ClassReader(class_ids_oid_file)
+    for batch in image_batch_data:
+        for task in batch['tasks']:
+            pred_path = get_path_to_prediction(task['id'])
+            if os.path.exists(pred_path):
+                with open(pred_path, 'r') as f:
+                    predictions = json.load(f)
+                for i, p in enumerate(predictions):
+                    if 'was_successful' in p and not p['was_successful']:
+                        label = p['LabelName']
+                        predictions[i]['LabelName'] = class_reader.get_key_of_class_from_label(
+                            label)
+                        feature_vectors.append(compute_feature_vector(predictions, i))
+                        predictions[i]['LabelName'] = label
+
+                        if p['acceptance_prediction'] is 0.0:
+                            y_.append(1.0)
+                        else:
+                            y_.append(0.0)
+
+                        # mark as complete
+                        p['was_successful'] = True
+
+                with open(pred_path, 'w') as f:
+                    json.dump(predictions, f)
+
+    if len(feature_vectors) > 0:
+        accept_prob_predictor.main(mode='train', user_feedback={'x': feature_vectors, 'y_': y_})
 
     return jsonify(success=True)

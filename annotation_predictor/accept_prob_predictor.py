@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import sys
 
 import numpy as np
@@ -7,7 +8,7 @@ import tensorflow as tf
 from tensorflow.python.framework.errors_impl import OutOfRangeError
 from tensorflow.python.saved_model import tag_constants, signature_constants
 
-from annotation_predictor.util.settings import model_dir
+from annotation_predictor.util.settings import model_dir, path_to_test_data
 from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -49,20 +50,33 @@ def prob_model(x):
 
     return y
 
-def main(mode: str, detections=None):
+def parse_tf_records(path_to_train_data):
+    train_datapoint = {'train/feature': tf.FixedLenFeature([606], tf.float32),
+                       'train/label': tf.FixedLenFeature([1], tf.float32)}
+    train_queue = tf.train.string_input_producer([path_to_train_data], num_epochs=50)
+    train_reader = tf.TFRecordReader()
+    _, serialized_example = train_reader.read(train_queue)
+    train_data = tf.parse_single_example(serialized_example, features=train_datapoint)
+    train_feature = tf.cast(train_data['train/feature'], tf.float32)
+    train_label = tf.cast(train_data['train/label'], tf.float32)
+    train_features, train_labels = tf.train.shuffle_batch([train_feature, train_label],
+                                                          batch_size=FLAGS.batch_size,
+                                                          capacity=50000,
+                                                          min_after_dequeue=0,
+                                                          allow_smaller_final_batch=True)
+    return train_features, train_labels
+
+def main(mode: str, user_feedback=None, detections=None):
     """
     Trains a model or uses an existent model to make predictions.
 
     Args:
         mode: Defines whether a model should be trained
         or an existent model should be used for making predictions.
+        user_feedback: Used in live-train-mode to train the model based on user input.
         detections: Used in detection-mode to give a list of detections
         for which predictions should be generated.
     """
-    x = tf.placeholder(tf.float32, [None, 606])
-    y = prob_model(x)
-
-    saver = tf.train.Saver()
 
     accept_prob_model_dir = os.path.join(model_dir, 'accept_prob_predictor')
 
@@ -70,63 +84,79 @@ def main(mode: str, detections=None):
         os.mkdir(accept_prob_model_dir)
 
     existent_checkpoints = os.listdir(accept_prob_model_dir)
-    actual_checkpoint = len(existent_checkpoints)
-    new_checkpoint = str(actual_checkpoint + 1)
-    actual_checkpoint = str(actual_checkpoint)
-    actual_checkpoint_dir = os.path.join(accept_prob_model_dir, actual_checkpoint)
-    new_checkpoint_dir = os.path.join(accept_prob_model_dir, new_checkpoint)
+    existent_checkpoints.sort(key=int)
 
-    if FLAGS and FLAGS.mode == 'train':
+    x = tf.placeholder(tf.float32, [None, 606])
+    y = prob_model(x)
+
+    saver = tf.train.Saver()
+
+    while True:
+        if len(existent_checkpoints) == 0:
+            new_checkpoint_dir = os.path.join(accept_prob_model_dir, '1')
+            break
+        actual_checkpoint = existent_checkpoints[len(existent_checkpoints) - 1]
+        actual_checkpoint_dir = os.path.join(accept_prob_model_dir, actual_checkpoint)
+        if len(os.listdir(actual_checkpoint_dir)) > 0:
+            new_checkpoint_dir = os.path.join(accept_prob_model_dir,
+                                              str(int(actual_checkpoint) + 1))
+            break
+
+        existent_checkpoints.remove(actual_checkpoint)
+        shutil.rmtree(actual_checkpoint_dir)
+    if (FLAGS and FLAGS.mode == 'train') or mode == 'train':
+        # initial train mode with fixed training data
+        if not user_feedback:
+            iterations = FLAGS.iterations
+            learning_rate = FLAGS.learning_rate
+            base = FLAGS.path_to_training_data
+            path_to_train_data = '{}_{}'.format(base, 'train.tfrecords')
+            train_features, train_labels = parse_tf_records(path_to_train_data)
+
+        # live train mode with user feedback
+        else:
+            iterations = 1
+            learning_rate = 0.2
+            batch_size = 64
+            train_features, train_labels = tf.train.shuffle_batch([user_feedback['x'],
+                                                                   user_feedback['y_']],
+                                                                  batch_size=batch_size,
+                                                                  capacity=50000,
+                                                                  min_after_dequeue=0,
+                                                                  allow_smaller_final_batch=True)
+
+        test_feat = []
+        test_lbl = []
+        example = tf.train.Example()
+        for record in tf.python_io.tf_record_iterator(path_to_test_data):
+            example.ParseFromString(record)
+            f = example.features.feature
+            test_feat.append(np.asarray(f['test/feature'].float_list.value))
+            test_lbl.append(f['test/label'].float_list.value[0])
+        test_feat = np.reshape(test_feat, (-1, 606))
+        test_lbl = np.reshape(test_lbl, (-1, 1))
+
+        init_op = tf.group(tf.global_variables_initializer(),
+                           tf.local_variables_initializer())
+
         _y = tf.placeholder(tf.float32, [None, 1])
+
+        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
+
+        builder = tf.saved_model.builder.SavedModelBuilder(new_checkpoint_dir)
 
         best_acc = 0.0
         best_acc_ann = 0.0
         best_acc_ver = 0.0
         early_stopping_counter = 0
 
-        builder = tf.saved_model.builder.SavedModelBuilder(new_checkpoint_dir)
-
-        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
-        train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
-
         with tf.Session() as sess:
-            base = FLAGS.path_to_training_data
-            path_to_train_data = '{}_{}'.format(base, 'train.tfrecords')
-            path_to_test_data = '{}_{}'.format(base, 'test.tfrecords')
 
-            train_datapoint = {'train/feature': tf.FixedLenFeature([606], tf.float32),
-                               'train/label': tf.FixedLenFeature([1], tf.float32)}
-            train_queue = tf.train.string_input_producer([path_to_train_data], num_epochs=50)
-            train_reader = tf.TFRecordReader()
-            _, serialized_example = train_reader.read(train_queue)
-            train_data = tf.parse_single_example(serialized_example, features=train_datapoint)
-
-            train_feature = tf.cast(train_data['train/feature'], tf.float32)
-            train_label = tf.cast(train_data['train/label'], tf.float32)
-
-            train_features, train_labels = tf.train.shuffle_batch([train_feature, train_label],
-                                                                  batch_size=FLAGS.batch_size,
-                                                                  capacity=50000,
-                                                                  min_after_dequeue=0,
-                                                                  allow_smaller_final_batch=True)
-
-            test_feat = []
-            test_lbl = []
-            example = tf.train.Example()
-            for record in tf.python_io.tf_record_iterator(path_to_test_data):
-                example.ParseFromString(record)
-                f = example.features.feature
-                test_feat.append(np.asarray(f['test/feature'].float_list.value))
-                test_lbl.append(f['test/label'].float_list.value[0])
-            test_feat = np.reshape(test_feat, (-1, 606))
-            test_lbl = np.reshape(test_lbl, (-1, 1))
-
-            init_op = tf.group(tf.global_variables_initializer(),
-                               tf.local_variables_initializer())
             sess.run(init_op)
 
-            if new_checkpoint != '1':
+            if len(existent_checkpoints) > 0:
                 saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
 
             prediction_input = tf.saved_model.utils.build_tensor_info(x)
@@ -150,19 +180,27 @@ def main(mode: str, detections=None):
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(coord=coord)
 
-            for batch_index in range(FLAGS.iterations):
+            for batch_index in range(iterations):
                 try:
                     feat, lbl = sess.run([train_features, train_labels])
                 except OutOfRangeError:
                     print('No more Training Data available')
                     break
 
-                if batch_index % 100 == 0:
+                train_op.run(feed_dict={x: np.reshape(feat, (-1, 606)),
+                                        _y: np.reshape(lbl, (-1, 1))})
+
+                if batch_index % 100 == 0 or user_feedback:
                     y_test = y.eval(feed_dict={x: test_feat, _y: test_lbl})
                     acc, acc_ann, acc_ver = evaluate_prediction_record(y_test, test_lbl)
                     print('step {},\t Annotation acc.:{}\tVerification acc.:{}'.format(batch_index,
                                                                                        acc_ann,
                                                                                        acc_ver))
+
+                    if user_feedback:
+                        saver.save(sess, os.path.join(new_checkpoint_dir, 'prob_predictor.ckpt'))
+                        builder.save()
+
                     if acc_ann + acc_ver > best_acc_ann + best_acc_ver:
                         best_acc = acc
                         best_acc_ann = acc_ann
@@ -172,13 +210,10 @@ def main(mode: str, detections=None):
                         builder.save()
 
                     elif early_stopping_counter == 50:
-                        print('Stopped early at batch {}/{}'.format(batch_index, FLAGS.iterations))
+                        print('Stopped early at batch {}/{}'.format(batch_index, iterations))
                         break
                     else:
                         early_stopping_counter += 1
-
-                train_op.run(feed_dict={x: feat,
-                                        _y: lbl})
 
             print('Accuracy:\t{}'.format(best_acc))
             print('Accuracy Ann:\t{}'.format(best_acc_ann))
@@ -191,7 +226,7 @@ def main(mode: str, detections=None):
             coord.join(threads)
             sess.close()
 
-    elif mode == 'predict':
+    elif mode == 'predict' and len(existent_checkpoints) > 0:
         feature_data = []
 
         for key in detections:

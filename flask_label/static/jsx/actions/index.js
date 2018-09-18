@@ -88,7 +88,7 @@ export function updateStore(batch, id, labels, predictions) {
 }
 
 export function updateBackend(id, labels, predictions) {
-    // Save data to backend
+    // Save data to backend and retrain models with new data
     fetch('/api/save_labels/' + id + '/', {
         method: 'POST',
         headers: {
@@ -108,7 +108,10 @@ export function updateBackend(id, labels, predictions) {
         body: JSON.stringify(predictions)
     })
         .then(
-            response => console.log(response.status, response.statusText, ': ', response.url)
+            response => console.log(response.status, response.statusText, ':', response.url)
+        )
+        .then(
+            fetch('/api/train_models/')
         );
 
     return {type: 'UPDATE_BACKEND', state: store.getState()}
