@@ -116,7 +116,7 @@ def main(mode: str, user_feedback=None, detections=None):
         # live train mode with user feedback
         else:
             iterations = 1
-            learning_rate = 0.2
+            learning_rate = 0.1
             batch_size = 64
             train_features, train_labels = tf.train.shuffle_batch([user_feedback['x'],
                                                                    user_feedback['y_']],
