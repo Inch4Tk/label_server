@@ -163,8 +163,8 @@ def batches():
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     video_batches = VideoBatch.query.all()
 
-    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
-    video_batch_data = video_batch_schema.dump(video_batches, many=True).data
+    image_batch_data = image_batch_schema.dump(img_batches, many=True)
+    video_batch_data = video_batch_schema.dump(video_batches, many=True)
 
     # Add postprocessing info about statistics
     for batch in image_batch_data:
@@ -178,7 +178,7 @@ def img_batch(batch_id):
     """Return data to a single image batch"""
     img_batch = ImageBatch.query.filter_by(id=batch_id).options(db.joinedload('tasks')).first()
 
-    batch = image_batch_schema.dump(img_batch).data
+    batch = image_batch_schema.dump(img_batch)
     batch["imgCount"], batch["labeledCount"] = batch_statistics(batch)
 
     return jsonify(batch)
@@ -229,7 +229,7 @@ def serve_labels():
     """Serves labels for all images from the instance folder"""
     labels = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
-    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    image_batch_data = image_batch_schema.dump(img_batches, many=True)
     for batch in image_batch_data:
         for task in batch['tasks']:
             label_path = get_path_to_label(task['id'])
@@ -272,7 +272,7 @@ def serve_predictions():
     """Serves predictions for all images from the instance folder"""
     predictions = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
-    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    image_batch_data = image_batch_schema.dump(img_batches, many=True)
     for batch in image_batch_data:
         for task in batch['tasks']:
             img_path = get_path_to_image(task['id'])
@@ -332,7 +332,7 @@ def train_models():
     feature_vectors = []
     y_ = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
-    image_batch_data = image_batch_schema.dump(img_batches, many=True).data
+    image_batch_data = image_batch_schema.dump(img_batches, many=True)
     class_reader = ClassReader(class_ids_oid_file)
     for batch in image_batch_data:
         for task in batch['tasks']:

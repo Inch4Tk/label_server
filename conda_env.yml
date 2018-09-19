@@ -8,7 +8,7 @@ dependencies:
     - pylint
     - pytest
     - coverage
-    - protobuf-compiler
+    - protobuf3
     - python-dotenv
     - Pillow
     - -e .

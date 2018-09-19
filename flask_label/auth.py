@@ -3,8 +3,8 @@ import functools
 from flask import (
     Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import abort
+from werkzeug.security import check_password_hash
 
 from flask_label.models import User, user_safe_schema
 
@@ -77,7 +77,7 @@ def load_logged_in_user():
         g.user_json = None
     else:
         g.user = User.query.filter_by(id=user_id).first()
-        g.user_json = user_safe_schema.dump(g.user).data
+        g.user_json = user_safe_schema.dump(g.user)
 
 @bp.route("/logout")
 def logout():
@@ -85,9 +85,9 @@ def logout():
     session.clear()
     return redirect(url_for("auth.login"))
 
-
 def login_required(view):
     """Function wrapper for other views. Use with decorator."""
+
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
@@ -99,6 +99,7 @@ def login_required(view):
 
 def api_login_required(view):
     """Function wrapper for other views. Use with decorator."""
+
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
