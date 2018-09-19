@@ -17,7 +17,7 @@ def visualize_detection(path_to_image: str):
     with open(class_ids_oid_file) as f:
         class_ids_oid = json.load(f)
     det = send_od_request(path_to_image)
-    pred = accept_prob_predictor.main('predict', det)
+    pred = accept_prob_predictor.main('predict', detections=det)
     image_id = os.path.splitext(os.path.basename(path_to_image))[0]
     img = Image.open(path_to_image)
     colors = ['blue', 'green', 'red', 'orange', 'brown', 'black', 'turquoise']
