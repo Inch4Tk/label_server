@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import OutOfRangeError
-from tensorflow.python.saved_model import tag_constants, signature_constants
+from tensorflow.python.saved_model.simple_save import simple_save
 
 from annotation_predictor.util.settings import model_dir, path_to_test_data
 from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
@@ -146,8 +146,6 @@ def main(mode: str, user_feedback=None, detections=None):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
 
-        builder = tf.saved_model.builder.SavedModelBuilder(new_checkpoint_dir)
-
         best_acc = 0.0
         best_acc_ann = 0.0
         best_acc_ver = 0.0
@@ -159,24 +157,6 @@ def main(mode: str, user_feedback=None, detections=None):
 
             if len(existent_checkpoints) > 0:
                 saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
-
-            prediction_input = tf.saved_model.utils.build_tensor_info(x)
-            prediction_output = tf.saved_model.utils.build_tensor_info(y)
-            prediction_signature = (
-                tf.saved_model.signature_def_utils.build_signature_def(
-                    inputs={tf.saved_model.signature_constants.PREDICT_INPUTS: prediction_input},
-                    outputs={
-                        tf.saved_model.signature_constants.PREDICT_METHOD_NAME: prediction_output},
-                    method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME)
-            )
-            legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
-
-            builder.add_meta_graph_and_variables(
-                sess,
-                [tag_constants.SERVING],
-                signature_def_map={
-                    signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: prediction_signature},
-                legacy_init_op=legacy_init_op)
 
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(coord=coord)
@@ -199,17 +179,27 @@ def main(mode: str, user_feedback=None, detections=None):
                                                                                        acc_ver))
 
                     if user_feedback:
+                        if os.path.exists(new_checkpoint_dir):
+                            shutil.rmtree(new_checkpoint_dir)
+                        simple_save(sess,
+                                    new_checkpoint_dir,
+                                    inputs={'inputs': x},
+                                    outputs={'outputs': y})
                         saver.save(sess, os.path.join(new_checkpoint_dir, 'prob_predictor.ckpt'))
-                        builder.save()
 
                     if acc_ann + acc_ver > best_acc_ann + best_acc_ver:
+                        if os.path.exists(new_checkpoint_dir):
+                            shutil.rmtree(new_checkpoint_dir)
+
                         best_acc = acc
                         best_acc_ann = acc_ann
                         best_acc_ver = acc_ver
                         early_stopping_counter = 0
+                        simple_save(sess,
+                                    new_checkpoint_dir,
+                                    inputs={'inputs': x},
+                                    outputs={'outputs': y})
                         saver.save(sess, os.path.join(new_checkpoint_dir, 'prob_predictor.ckpt'))
-                        builder.save()
-
                     elif early_stopping_counter == 50:
                         print('Stopped early at batch {}/{}'.format(batch_index, iterations))
                         break
