@@ -55,7 +55,6 @@ def send_od_request(path_to_image: str):
         xmax = bounding_boxes[4 * i + 3]
         result[image_id].append({'LabelName': label_name, 'Confidence': confidence,
                                  'XMin': xmin, 'YMin': ymin, 'XMax': xmax, 'YMax': ymax})
-
     return result
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import os
+import shutil
 import tarfile
 import urllib.request as urllib
 
@@ -23,7 +24,19 @@ def download_od_model():
         tar.extractall('models')
         tar.close()
         os.remove(fname)
-        os.rename(os.path.join(mobile_dir, 'saved_model'), os.path.join(mobile_dir, '1'))
+
+        checkpoint_dir = os.path.join(mobile_dir, '1')
+        os.rename(os.path.join(mobile_dir, 'saved_model'), checkpoint_dir)
+        shutil.move(os.path.join(mobile_dir, 'checkpoint'),
+                    os.path.join(checkpoint_dir, 'checkpoint'))
+        shutil.move(os.path.join(mobile_dir, 'frozen_inference_graph.pb'),
+                    os.path.join(checkpoint_dir, 'frozen_inference_graph.pb'))
+        shutil.move(os.path.join(mobile_dir, 'model.ckpt.data-00000-of-00001'),
+                    os.path.join(checkpoint_dir, 'model.ckpt.data-00000-of-00001'))
+        shutil.move(os.path.join(mobile_dir, 'model.ckpt.index'),
+                    os.path.join(checkpoint_dir, 'model.ckpt.index'))
+        shutil.move(os.path.join(mobile_dir, 'model.ckpt.meta'),
+                    os.path.join(checkpoint_dir, 'model.ckpt.meta'))
 
 if __name__ == '__main__':
     download_od_model()

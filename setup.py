@@ -13,6 +13,9 @@ setup(
         "flask-migrate",
         "flask-marshmallow",
         "marshmallow-sqlalchemy",
-        'tensorflow'
+        'numpy',
+        'tensorflow==1.10.0',
+        'tensorflow-serving-api',
+        'object-detection'
     ],
 )

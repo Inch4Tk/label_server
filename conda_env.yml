@@ -4,9 +4,11 @@ dependencies:
   - pip
   - pip:
     - autopep8
+    - grpcio
     - pylint
     - pytest
     - coverage
+    - protobuf-compiler
     - python-dotenv
     - Pillow
     - -e .

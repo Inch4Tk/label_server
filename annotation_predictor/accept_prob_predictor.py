@@ -88,10 +88,13 @@ def main(mode: str, user_feedback=None, detections=None):
 
     x = tf.placeholder(tf.float32, [None, 606])
     y = prob_model(x)
+    _y = tf.placeholder(tf.float32, [None, 1])
+    loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
 
     saver = tf.train.Saver()
 
     while True:
+        actual_checkpoint_dir = ''
         if len(existent_checkpoints) == 0:
             new_checkpoint_dir = os.path.join(accept_prob_model_dir, '1')
             break
@@ -104,6 +107,7 @@ def main(mode: str, user_feedback=None, detections=None):
 
         existent_checkpoints.remove(actual_checkpoint)
         shutil.rmtree(actual_checkpoint_dir)
+
     if (FLAGS and FLAGS.mode == 'train') or mode == 'train':
         # initial train mode with fixed training data
         if not user_feedback:
@@ -139,9 +143,6 @@ def main(mode: str, user_feedback=None, detections=None):
         init_op = tf.group(tf.global_variables_initializer(),
                            tf.local_variables_initializer())
 
-        _y = tf.placeholder(tf.float32, [None, 1])
-
-        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
 
@@ -228,7 +229,6 @@ def main(mode: str, user_feedback=None, detections=None):
 
     elif mode == 'predict' and len(existent_checkpoints) > 0:
         feature_data = []
-
         for key in detections:
             for i, _ in enumerate(detections[key]):
                 feature_data.append(compute_feature_vector(detections[key], i))

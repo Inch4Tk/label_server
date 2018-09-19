@@ -1,6 +1,6 @@
 import os
 
-root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+root_dir = '/home/schererc/IntelliJProjects/label_server'
 annotation_predictor_dir = os.path.join(root_dir, 'annotation_predictor')
 annotation_predictor_metadata_dir = os.path.join(annotation_predictor_dir, 'metadata')
 annotation_predictor_util_dir = os.path.join(annotation_predictor_dir, 'util')
