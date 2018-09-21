@@ -25,6 +25,5 @@ def send_accept_prob_request(feature_vectors: list):
     request.inputs['inputs'].CopyFrom(tf.make_tensor_proto(feature_vectors, dtype=tf.float32))
 
     pred_result = stub.Predict(request, 60.0)
-
-    result = np.round(pred_result.outputs['tensorflow/serving/predict'].float_val)
+    result = np.round(pred_result.outputs['outputs'].float_val)
     return result
