@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
         gnupg \
         tar
 
-ARG TF_SERVING_VERSION=1.10.0
+ARG TF_SERVING_VERSION=1.11.0-rc0
 ARG TF_SERVING_PKGNAME=tensorflow-model-server
 RUN curl -LO https://storage.googleapis.com/tensorflow-serving-apt/pool/${TF_SERVING_PKGNAME}-${TF_SERVING_VERSION}/t/${TF_SERVING_PKGNAME}/${TF_SERVING_PKGNAME}_${TF_SERVING_VERSION}_all.deb ; \
         dpkg -i ${TF_SERVING_PKGNAME}_${TF_SERVING_VERSION}_all.deb ; \
