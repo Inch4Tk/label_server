@@ -1,11 +1,9 @@
 import os
 import shutil
+import subprocess
 
-from object_detection.utils.config_util import get_configs_from_pipeline_file, \
-    create_pipeline_proto_from_configs
-
-from annotation_predictor.util.settings import model_dir
-from object_detector.exporter import export_inference_graph
+from annotation_predictor.util.settings import model_dir, path_to_pipeline_config, \
+    path_to_od_lib
 
 def train():
     od_model_dir = os.path.join(model_dir, 'ssdlite_mobilenet_v2_coco_2018_05_09')
@@ -15,7 +13,6 @@ def train():
     existent_checkpoints.sort(key=int)
 
     while True:
-        actual_checkpoint_dir = ''
         if len(existent_checkpoints) == 0:
             new_checkpoint_dir = os.path.join(od_model_dir, '1')
             break
@@ -30,17 +27,24 @@ def train():
         existent_checkpoints.remove(actual_checkpoint)
         shutil.rmtree(actual_checkpoint_dir)
 
-    # Create proto from model configuration
-    configs = get_configs_from_pipeline_file(os.path.join(od_model_dir, 'pipeline.config'))
-    pipeline_config = create_pipeline_proto_from_configs(configs=configs)
+    path_to_train_script = os.path.join(path_to_od_lib, 'model_main.py')
+    path_to_export_script = os.path.join(path_to_od_lib, 'export_inference_graph.py')
+    path_to_model_ckpt = os.path.join(new_checkpoint_dir, 'model.ckpt-5')
 
-    # save new frozen graph for tensorflow serving
-    export_inference_graph(input_type='image_tensor', pipeline_config=pipeline_config,
-                           trained_checkpoint_prefix=os.path.join(actual_checkpoint_dir,
-                                                                  'model.ckpt'),
-                           output_directory=od_model_dir)
+    train_command = ['python', path_to_train_script, '--pipeline_config_path',
+                     path_to_pipeline_config, '--model_dir', new_checkpoint_dir]
+    export_command = ['python', path_to_export_script, '--input_type', 'image_tensor',
+                      '--pipeline_config_path', path_to_pipeline_config,
+                      '--trained_checkpoint_prefix', path_to_model_ckpt,
+                      '--output_directory', new_checkpoint_dir]
 
-    shutil.move(os.path.join(od_model_dir, 'saved_model'), new_checkpoint_dir)
+    p = subprocess.Popen(train_command, shell=False, stdout=subprocess.PIPE)
+    p.communicate()
+    p = subprocess.Popen(export_command, shell=False, stdout=subprocess.PIPE)
+    p.communicate()
+
+    shutil.move(os.path.join(new_checkpoint_dir, 'saved_model', 'saved_model.pb'),
+                os.path.join(new_checkpoint_dir, 'saved_model.pb'))
 
 if __name__ == '__main__':
     train()

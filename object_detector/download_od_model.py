@@ -37,6 +37,8 @@ def download_od_model():
                     os.path.join(checkpoint_dir, 'model.ckpt.index'))
         shutil.move(os.path.join(mobile_dir, 'model.ckpt.meta'),
                     os.path.join(checkpoint_dir, 'model.ckpt.meta'))
+        shutil.move(os.path.join(mobile_dir, 'pipeline.config'),
+                    os.path.join(checkpoint_dir, 'pipeline.config'))
 
 if __name__ == '__main__':
     download_od_model()

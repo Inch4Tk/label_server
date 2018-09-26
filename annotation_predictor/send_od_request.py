@@ -7,7 +7,7 @@ from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2
 
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.settings import class_ids_coco_file
+from annotation_predictor.util.settings import path_to_known_class_ids
 from annotation_predictor.util.util import load_image
 
 def send_od_request(path_to_image: str):
@@ -41,7 +41,7 @@ def send_od_request(path_to_image: str):
 
     result = {image_id: []}
 
-    class_reader = ClassReader(class_ids_coco_file)
+    class_reader = ClassReader(path_to_known_class_ids)
     for i, cls in enumerate(classes):
         confidence = scores[i]
 
