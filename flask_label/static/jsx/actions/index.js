@@ -34,6 +34,17 @@ const receivePredictions = (data) => ({
     data: data
 });
 
+export const REQUEST_CLASSES = "REQUEST_CLASSES";
+const requestClasses = () => ({
+    type: REQUEST_CLASSES,
+});
+
+export const RECEIVE_CLASSES = "RECEIVE_CLASSES";
+const receiveClasses = (data) => ({
+    type: RECEIVE_CLASSES,
+    data: data
+});
+
 export function fetchBatches() {
     // Async call to /api/batches, using thunk middleware (aka returning a function)
     return function (dispatch) {
@@ -55,6 +66,18 @@ export function fetchLabels() {
                 response => response.json(),
                 error => console.log('An error occurred.', error))
             .then(json => dispatch(receiveLabels(json)))
+    }
+}
+
+export function fetchClasses() {
+    // Async call to /api/predictions, using thunk middleware (aka returning a function)
+    return function (dispatch) {
+        dispatch(requestClasses());
+        return fetch("/api/serve_classes/")
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error))
+            .then(json => dispatch(receiveClasses(json)))
     }
 }
 

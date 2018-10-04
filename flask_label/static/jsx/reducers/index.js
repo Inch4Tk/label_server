@@ -2,6 +2,7 @@ import {combineReducers} from "redux"
 import batches from "./batches"
 import labels from "./labels"
 import predictions from "./predictions"
+import classes from "./classes"
 
 // HOW STATE TREE LOOKS LIKE
 const example_state = {
@@ -60,7 +61,9 @@ const example_state = {
                 }
             }
         ]
-    }
+    },
+
+    classes: ["Hamburger", "Tomato"]
     // user: {
     //     id: 1234,
     //     username: "horst"
@@ -69,5 +72,5 @@ const example_state = {
 
 
 export default combineReducers({
-    batches, labels, predictions
+    batches, labels, predictions, classes
 })

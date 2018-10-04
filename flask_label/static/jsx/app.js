@@ -16,7 +16,7 @@ import thunkMiddleware from 'redux-thunk'
 import {Provider} from 'react-redux'
 import {applyMiddleware, createStore} from "redux"
 import rootReducer from "./reducers";
-import {fetchBatches, fetchLabels, fetchPredictions} from "./actions";
+import {fetchBatches, fetchClasses, fetchLabels, fetchPredictions} from "./actions";
 
 // All our routes
 const routes = [
@@ -125,7 +125,8 @@ ReactDOM.render(
 Promise.all([
     store.dispatch(fetchBatches()),
     store.dispatch(fetchLabels()),
-    store.dispatch(fetchPredictions())
+    store.dispatch(fetchPredictions()),
+    store.dispatch(fetchClasses())
 ]).then(() => {
     console.log('Initialized store');
 

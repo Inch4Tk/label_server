@@ -29,7 +29,9 @@ const mapStateToProps = (state, {match}) => {
         batch: getBatchWithId(state, match.params.batch_id),
         task: getTaskWithId(state, match.params.batch_id, match.params.task_id),
         labels: getLabelsWithId(state, match.params.task_id),
-        predictions: getPredictionsWithId(state, match.params.task_id)
+        predictions: getPredictionsWithId(state, match.params.task_id),
+        known_classes: state.classes.classes
+
     };
 };
 

@@ -425,6 +425,14 @@ def save_predictions(img_id):
 
     return jsonify(success=True)
 
+@bp.route("/serve_classes/")
+@api_login_required
+def serve_classes():
+    """Serves classes for all images from the instance folder"""
+    class_reader = ClassReader(known_class_ids_od)
+
+    return jsonify(list(class_reader.class_ids.values()))
+
 @bp.route('/train_models/')
 @api_login_required
 def train_models():

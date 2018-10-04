@@ -17,7 +17,6 @@ const ImageTaskList = ({ batchId, tasks }) => (
 )
 
 const ImageBatchDetail = ({ batch }) => {
-    console.log(batch)
     if (!batch) {
         return (<NoMatch />)
     }
