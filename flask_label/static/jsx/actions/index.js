@@ -127,7 +127,7 @@ function saveLabelsandPrediction(id, labels, predictions) {
 }
 
 function trainModels(nr_of_trainable_labels) {
-    if(nr_of_trainable_labels > 0) {
+    if(nr_of_trainable_labels > 49) {
         return fetch('/api/train_models/')
             .then(
                 response => response.json(),
