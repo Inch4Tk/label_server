@@ -88,32 +88,74 @@ export function updateStore(batch, id, labels, predictions) {
     return {type: 'UPDATE_STORE', state: state}
 }
 
-export function updateBackend(id, labels, predictions) {
-    // Save data to backend and retrain models with new data
-    fetch('/api/save_labels/' + id + '/', {
+function saveLabels(id, labels) {
+    return fetch('/api/save_labels/' + id + '/', {
         method: 'POST',
         headers: {
             "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify(labels)
-    })
-        .then(
-            response => console.log(response.status, response.statusText, ':', response.url)
-        );
+    });
+}
 
-    fetch('/api/save_predictions/' + id + '/', {
+function savePredictions(id, predictions) {
+    return fetch('/api/save_predictions/' + id + '/', {
         method: 'POST',
         headers: {
             "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify(predictions)
-    })
-        .then(
-            response => console.log(response.status, response.statusText, ':', response.url)
-        )
-        .then(
-            fetch('/api/train_models/')
-        );
+    });
+}
+
+function getNumberofTrainableLabels() {
+    let state = store.getState();
+    let nr_of_trainable_labels = 0;
+    for (let i = 0; i < state.labels.annotations.length; i++) {
+        let label = state.labels.annotations[i];
+        for (let j = 0; j < label.was_trained.length; j++) {
+            if (label.was_trained[j] === false) {
+                nr_of_trainable_labels++;
+            }
+        }
+    }
+    return nr_of_trainable_labels
+}
+
+function saveLabelsandPrediction(id, labels, predictions) {
+    return Promise.all([saveLabels(id, labels), savePredictions(id, predictions)])
+}
+
+function trainModels(nr_of_trainable_labels) {
+    if(nr_of_trainable_labels > 0) {
+        return fetch('/api/train_models/')
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error)
+            )
+    }
+    else {
+        console.log('Not enough labels to train: ' + nr_of_trainable_labels + ' of 50')
+    }
+}
+
+function updatePredictions(nr_of_trainable_labels) {
+    if(nr_of_trainable_labels > 49) {
+        return fetch("/api/update_predictions/")
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error)
+            )
+    }
+    console.log('Not enough labels to update predictions: ' + nr_of_trainable_labels + ' of 50')
+}
+
+export function updateBackend(id, labels, predictions) {
+    // Save data to backend and retrain models with new data
+    let nr_of_trainable_labels = getNumberofTrainableLabels();
+    saveLabelsandPrediction(id, labels, predictions)
+        .then(trainModels(nr_of_trainable_labels))
+        .then(updatePredictions(nr_of_trainable_labels));
 
     return {type: 'UPDATE_BACKEND', state: store.getState()}
 }

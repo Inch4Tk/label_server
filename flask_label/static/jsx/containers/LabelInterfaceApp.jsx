@@ -1,6 +1,6 @@
 import {connect} from "react-redux";
 import {LabelInterface} from "../components/LabelInterface.jsx";
-import {updateBackend, updateStore} from "../actions";
+import {retrainModels, updateBackend, updatePredictions, updateStore} from "../actions";
 
 function cloneObject(src) {
     //clones an object by parsing all jsonifyable attributes and saving them in another object
@@ -36,7 +36,7 @@ const mapStateToProps = (state, {match}) => {
 const mapDispatchToProps = dispatch => ({
     save_data: (batch, id, labels, predictions) => {
         dispatch(updateStore(batch, id, labels, predictions));
-        dispatch(updateBackend(id, labels, predictions));
+        dispatch(updateBackend(id, labels, predictions))
     }
 });
 

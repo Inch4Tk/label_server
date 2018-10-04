@@ -4,15 +4,18 @@ import random
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
+import tensorflow as tf
 from flask import (
     Blueprint, current_app, send_from_directory, jsonify, request
 )
+from object_detection.utils import dataset_util
 
 from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.class_reader import ClassReader
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
-from annotation_predictor.util.settings import class_ids_oid_file
+from annotation_predictor.util.settings import known_class_ids_annotation_predictor, \
+    known_class_ids_od
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
 from flask_label.database import db
@@ -20,6 +23,8 @@ from flask_label.database_cli import db_update_task
 from flask_label.models import (
     ImageTask, ImageBatch, VideoBatch, image_batch_schema, video_batch_schema, image_task_schema
 )
+from object_detector import train_od_model
+from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -168,6 +173,58 @@ def save_labels_to_xml(data, path):
     elif os.path.exists(path):
         os.remove(path)
 
+def create_tf_example(example):
+    width = int(example[0])
+    height = int(example[1])
+    filename = str.encode(example[2])
+
+    with tf.gfile.GFile(example[3], 'rb') as f:
+        encoded_image_data = bytes(f.read())
+    image_format = b'jpg'
+
+    boxes = example[5]
+    xmins = []
+    ymins = []
+    xmaxs = []
+    ymaxs = []
+
+    for b in boxes:
+        xmins.append(b[0])
+        ymins.append(b[1])
+        xmaxs.append(b[2])
+        ymaxs.append(b[3])
+
+    xmins = [x / width for x in xmins]
+    xmaxs = [x / width for x in xmaxs]
+    ymins = [y / height for y in ymins]
+    ymaxs = [y / height for y in ymaxs]
+
+    class_reader = ClassReader(known_class_ids_annotation_predictor)
+
+    classes_text = example[4][:]
+    classes = []
+
+    for i, cls in enumerate(classes_text):
+        classes.append(class_reader.get_index_of_class_from_label(cls))
+        class_encoded = str.encode(cls)
+        classes_text[i] = class_encoded
+
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/encoded': dataset_util.bytes_feature(encoded_image_data),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+    return tf_example
+
 @bp.route("/batches/")
 @api_login_required
 def batches():
@@ -239,6 +296,7 @@ def serve_image(img_id):
 @api_login_required
 def serve_labels():
     """Serves labels for all images from the instance folder"""
+    db_update_task()
     labels = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     image_batch_data = image_batch_schema.dump(img_batches, many=True)
@@ -303,11 +361,8 @@ def serve_predictions():
                         feature_vectors.append(compute_feature_vector(prediction, i))
                     acceptance_prediction = send_accept_prob_request(feature_vectors)
 
-                    class_reader = ClassReader(class_ids_oid_file)
                     for i, p in enumerate(acceptance_prediction):
                         prediction[i]['acceptance_prediction'] = p
-                        prediction[i]['LabelName'] = class_reader.get_class_from_id(
-                            prediction[i]['LabelName'])
                     prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True)
 
                 predictions.append({'id': str(task['id']), 'predictions': prediction})
@@ -316,6 +371,38 @@ def serve_predictions():
                     os.mkdir(os.path.dirname(pred_path))
                 with open(pred_path, 'w') as f:
                     json.dump(prediction, f)
+
+    return jsonify(predictions)
+
+@bp.route('/update_predictions/')
+@api_login_required
+def update_predictions():
+    """Updates predictions for all images from the instance folder"""
+    predictions = []
+    img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
+    image_batch_data = image_batch_schema.dump(img_batches, many=True)
+    for batch in image_batch_data:
+        for task in batch['tasks']:
+            img_path = get_path_to_image(task['id'])
+            pred_path = get_path_to_prediction(task['id'])
+
+            prediction = send_od_request(img_path)
+            prediction = list(prediction.values())[0]
+            if len(prediction) > 0:
+                feature_vectors = []
+                for i, _ in enumerate(prediction):
+                    feature_vectors.append(compute_feature_vector(prediction, i))
+                acceptance_prediction = send_accept_prob_request(feature_vectors)
+                for i, p in enumerate(acceptance_prediction):
+                    prediction[i]['acceptance_prediction'] = p
+                prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True)
+
+            predictions.append({'id': str(task['id']), 'predictions': prediction})
+
+            if not os.path.exists(os.path.dirname(pred_path)):
+                os.mkdir(os.path.dirname(pred_path))
+            with open(pred_path, 'w') as f:
+                json.dump(prediction, f)
 
     return jsonify(predictions)
 
@@ -346,9 +433,40 @@ def train_models():
     y_ = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     image_batch_data = image_batch_schema.dump(img_batches, many=True)
-    class_reader = ClassReader(class_ids_oid_file)
+    class_reader_od = ClassReader(known_class_ids_od)
+    class_reader_acc_prob = ClassReader(known_class_ids_annotation_predictor)
+    writer = tf.python_io.TFRecordWriter(
+        '/home/schererc/IntelliJProjects/label_server/object_detector/data/train.record')
+
     for batch in image_batch_data:
         for task in batch['tasks']:
+            label_path = get_path_to_label(task['id'])
+            if os.path.exists(label_path):
+                image_path = get_path_to_image(task['id'])
+                width, height, classes, boxes, was_trained = read_labels_from_xml(label_path)
+
+                for i, cls in enumerate(classes):
+                    if not was_trained[i]:
+                        class_id_od = class_reader_od.get_index_of_class_from_label(cls)
+                        if class_id_od == -1:
+                            class_reader_od.add_class_to_file(cls)
+                            parse_class_ids_json_to_pbtxt()
+                            update_number_of_classes()
+
+                        class_id_accept_prob = class_reader_acc_prob.get_index_of_class_from_label(
+                            cls)
+                        if class_id_accept_prob == -1:
+                            class_reader_acc_prob.add_class_to_file(cls)
+
+                        tf_example = create_tf_example(
+                            [width, height, task['filename'], image_path, classes, boxes])
+                        writer.write(tf_example.SerializeToString())
+
+                        save_labels_to_xml(
+                            {'width': width, 'height': height, 'classes': classes, 'boxes': boxes,
+                             'was_trained': [True] * len(classes)},
+                            label_path)
+
             pred_path = get_path_to_prediction(task['id'])
             if os.path.exists(pred_path):
                 with open(pred_path, 'r') as f:
@@ -356,8 +474,6 @@ def train_models():
                 for i, p in enumerate(predictions):
                     if 'was_successful' in p and not p['was_successful']:
                         label = p['LabelName']
-                        predictions[i]['LabelName'] = class_reader.get_key_of_class_from_label(
-                            label)
                         feature_vectors.append(compute_feature_vector(predictions, i))
                         predictions[i]['LabelName'] = label
 
@@ -371,8 +487,10 @@ def train_models():
 
                 with open(pred_path, 'w') as f:
                     json.dump(predictions, f)
+    writer.close()
 
     if len(feature_vectors) > 0:
         accept_prob_predictor.main(mode='train', user_feedback={'x': feature_vectors, 'y_': y_})
+    train_od_model.train()
 
     return jsonify(success=True)
