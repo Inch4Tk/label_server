@@ -43,17 +43,24 @@ def train():
 
     path_to_train_script = os.path.join(path_to_od_lib, 'model_main.py')
     path_to_export_script = os.path.join(path_to_od_lib, 'export_inference_graph.py')
-    path_to_model_ckpt = os.path.join(new_checkpoint_dir, 'model.ckpt-5')
 
     train_command = ['python', path_to_train_script, '--pipeline_config_path',
                      path_to_pipeline_config, '--model_dir', new_checkpoint_dir]
+    p = subprocess.Popen(train_command, shell=False, stdout=subprocess.PIPE)
+    p.communicate()
+
+    files_in_new_ckpt = os.listdir(new_checkpoint_dir)
+    for f in files_in_new_ckpt:
+        if fnmatch.fnmatch(f, 'model.ckpt*'):
+            new_ckpt = os.path.splitext(f)[0]
+            break
+
+    path_to_model_ckpt = os.path.join(new_checkpoint_dir, new_ckpt)
     export_command = ['python', path_to_export_script, '--input_type', 'image_tensor',
                       '--pipeline_config_path', path_to_pipeline_config,
                       '--trained_checkpoint_prefix', path_to_model_ckpt,
                       '--output_directory', new_checkpoint_dir]
 
-    p = subprocess.Popen(train_command, shell=False, stdout=subprocess.PIPE)
-    p.communicate()
     p = subprocess.Popen(export_command, shell=False, stdout=subprocess.PIPE)
     p.communicate()
 
