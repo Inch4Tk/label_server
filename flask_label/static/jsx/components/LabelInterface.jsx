@@ -94,6 +94,7 @@ class LabelInterface extends React.Component {
         this.image = undefined;
         this.resize_factor = undefined;
         this.canvasRev = React.createRef();
+        this.was_trained = [];
         this.state = {
             classes: [],
             boxes: [],
@@ -116,6 +117,11 @@ class LabelInterface extends React.Component {
         this.task_id = task.id;
         this.image = this.load_image("/api/serve_image/" + task.id + "/");
         let labels = this.props.labels;
+
+        if (this.props.labels.was_trained) {
+            this.was_trained = this.props.labels.was_trained;
+        }
+
         let predictions = this.props.predictions;
         let deleted = [];
         if (labels.boxes.length > 0) {
@@ -153,6 +159,7 @@ class LabelInterface extends React.Component {
                 if (this.state.deleted[i]) {
                     boxes.splice(current, 1);
                     classes.splice(current, 1);
+                    this.was_trained.splice(current, 1)
                 }
                 else {
                     current++;
@@ -165,10 +172,10 @@ class LabelInterface extends React.Component {
                     boxes[i][j] = boxes[i][j] / this.resize_factor;
                 }
             }
-
             let label_data = {
                 'classes': classes,
                 'boxes': boxes,
+                'was_trained': this.was_trained,
                 'width': this.image.width,
                 'height': this.image.height
             };
@@ -312,6 +319,7 @@ class LabelInterface extends React.Component {
         else if (pred) {
             //F: falsify proposal
             if (kc === 70) {
+                this.has_changed = true;
                 //don't care about falsified annotation proposals as it was fault of object detector
                 //still set variable to true to mark this proposal as complete
                 pred['was_successful'] = (pred['acceptance_prediction'] === 0);
@@ -328,7 +336,8 @@ class LabelInterface extends React.Component {
                     pred['YMin'] * this.resize_factor * height,
                     pred['XMax'] * this.resize_factor * width,
                     pred['YMax'] * this.resize_factor * height]);
-                newState.deleted.push(false)
+                newState.deleted.push(false);
+                this.was_trained.push(false);
             }
 
             newState.instructions = get_instructions(get_open_prediction(predictions));
@@ -460,6 +469,7 @@ class LabelInterface extends React.Component {
             newState.boxes.push(new_box);
             newState.classes.push(c);
             newState.deleted.push(false);
+            this.was_trained.push(false)
         }
 
         this.has_changed = true;

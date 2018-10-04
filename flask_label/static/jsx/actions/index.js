@@ -82,6 +82,7 @@ export function updateStore(batch, id, labels, predictions) {
     label['boxes'] = labels['boxes'];
     label['width'] = labels['width'];
     label['height'] = labels['height'];
+    label['was_trained'] = labels['was_trained'];
     state.predictions.pred.find(x => x.id == id).predictions = predictions;
 
     return {type: 'UPDATE_STORE', state: state}

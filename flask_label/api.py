@@ -84,12 +84,14 @@ def read_labels_from_xml(path):
         height: height of the respective image of the label
         classes: classes of annotated objects
         boxes: position of annotated objects
+        was_trained: boolean flag, indicating if label has been used for training already
     """
 
     width = '-1'
     height = '-1'
     classes = []
     boxes = []
+    was_trained = []
 
     if os.path.exists(path):
         tree = ET.parse(path)
@@ -102,6 +104,13 @@ def read_labels_from_xml(path):
 
         for name in root.findall('./object/name'):
             classes.append(name.text)
+
+        for name in root.findall('./object/was_trained'):
+            val = name.text
+            if val == 'True':
+                was_trained.append(True)
+            else:
+                was_trained.append(False)
 
         for i, xmin in enumerate(root.findall('./object/bndbox/xmin')):
             boxes.append([])
@@ -116,7 +125,7 @@ def read_labels_from_xml(path):
         for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
             boxes[i].append(int(ymax.text, 10))
 
-    return width, height, classes, boxes
+    return width, height, classes, boxes, was_trained
 
 def save_labels_to_xml(data, path):
     """
@@ -131,6 +140,8 @@ def save_labels_to_xml(data, path):
     boxes = data['boxes']
     width = data['width']
     height = data['height']
+    was_trained = data['was_trained']
+
     if len(classes) != 0:
         root = ET.Element('annotation')
 
@@ -141,6 +152,7 @@ def save_labels_to_xml(data, path):
         for i, c in enumerate(classes):
             obj = ET.SubElement(root, 'object')
             ET.SubElement(obj, 'name').text = c
+            ET.SubElement(obj, 'was_trained').text = str(was_trained[i])
             box = ET.SubElement(obj, 'bndbox')
             ET.SubElement(box, 'xmin').text = str(round(boxes[i][0]))
             ET.SubElement(box, 'ymin').text = str(round(boxes[i][1]))
@@ -234,13 +246,14 @@ def serve_labels():
         for task in batch['tasks']:
             label_path = get_path_to_label(task['id'])
 
-            width, height, classes, boxes = read_labels_from_xml(label_path)
+            width, height, classes, boxes, was_trained = read_labels_from_xml(label_path)
 
             labels.append({'id': str(task['id']),
                            'classes': classes,
                            'boxes': boxes,
                            'width': width,
-                           'height': height})
+                           'height': height,
+                           'was_trained': was_trained})
 
     return jsonify(labels)
 
