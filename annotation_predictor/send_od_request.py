@@ -1,10 +1,9 @@
 import os
 import sys
 
+import grpc
 import tensorflow as tf
-from grpc.beta import implementations
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow_serving.apis import predict_pb2, prediction_service_pb2_grpc
 
 from annotation_predictor.util.class_reader import ClassReader
 from annotation_predictor.util.settings import path_to_known_class_ids
@@ -19,9 +18,9 @@ def send_od_request(path_to_image: str):
     Returns: List of all detections on the given image
 
     """
-    channel = implementations.insecure_channel('localhost', 9000)
+    channel = grpc.insecure_channel('localhost:9000')
 
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     request = predict_pb2.PredictRequest()
 

@@ -1,8 +1,7 @@
+import grpc
 import numpy as np
 import tensorflow as tf
-from grpc.beta import implementations
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow_serving.apis import predict_pb2, prediction_service_pb2_grpc
 
 def send_accept_prob_request(feature_vectors: list):
     """
@@ -14,9 +13,9 @@ def send_accept_prob_request(feature_vectors: list):
     Returns: Acceptance inferrence for each prediction
 
     """
-    channel = implementations.insecure_channel('localhost', 9000)
+    channel = grpc.insecure_channel('localhost:9000')
 
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     request = predict_pb2.PredictRequest()
 
