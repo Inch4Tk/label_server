@@ -32,3 +32,12 @@ def update_number_of_classes():
 
     with open(path_to_pipeline_config, 'w') as f:
         f.writelines(data)
+
+def update_finetune_checkpoint(path_to_new_checkpoint):
+    with open(path_to_pipeline_config, 'r') as f:
+        data = f.readlines()
+
+    data[156] = '  fine_tune_checkpoint: {}\n'.format(f'"{path_to_new_checkpoint}"')
+
+    with open(path_to_pipeline_config, 'w') as f:
+        f.writelines(data)

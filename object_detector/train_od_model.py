@@ -1,9 +1,11 @@
+import fnmatch
 import os
 import shutil
 import subprocess
 
 from annotation_predictor.util.settings import model_dir, path_to_pipeline_config, \
-    path_to_od_lib
+    path_to_od_lib, path_to_od_dir
+from object_detector.util import update_finetune_checkpoint
 
 def train():
     od_model_dir = os.path.join(model_dir, 'ssdlite_mobilenet_v2_coco_2018_05_09')
@@ -12,16 +14,28 @@ def train():
                             os.path.isdir(os.path.join(od_model_dir, name))]
     existent_checkpoints.sort(key=int)
 
-    while True:
-        if len(existent_checkpoints) == 0:
-            new_checkpoint_dir = os.path.join(od_model_dir, '1')
-            break
+    # remove incomplete checkpoints
+    for chkpt in existent_checkpoints:
+        is_legit = False
+        path_to_ckpt = os.path.join(od_model_dir, chkpt)
+        chkpt_files = os.listdir(path_to_ckpt)
+        for f in chkpt_files:
+            if fnmatch.fnmatch(f, 'model.ckpt*'):
+                is_legit = True
+                break
 
-        actual_checkpoint = existent_checkpoints[len(existent_checkpoints) - 1]
-        actual_checkpoint_dir = os.path.join(od_model_dir, actual_checkpoint)
+        if not is_legit:
+            shutil.rmtree(path_to_ckpt)
+            existent_checkpoints.remove(chkpt)
 
-        if len(os.listdir(actual_checkpoint_dir)) > 0:
-            new_checkpoint_dir = os.path.join(od_model_dir, str(int(actual_checkpoint) + 1))
+    actual_checkpoint = str(len(existent_checkpoints))
+    actual_checkpoint_dir = os.path.join(od_model_dir, actual_checkpoint)
+    new_checkpoint_dir = os.path.join(od_model_dir, str(int(actual_checkpoint) + 1))
+
+    files_in_actual_ckpt = os.listdir(actual_checkpoint_dir)
+    for f in files_in_actual_ckpt:
+        if fnmatch.fnmatch(f, 'model.ckpt*'):
+            update_finetune_checkpoint(os.path.join(actual_checkpoint_dir, 'model.ckpt'))
             break
 
         existent_checkpoints.remove(actual_checkpoint)
