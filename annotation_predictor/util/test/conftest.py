@@ -3,12 +3,12 @@ from collections import OrderedDict
 
 from annotation_predictor.util.class_reader import ClassReader
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util.settings import class_ids_oid_file, \
+from annotation_predictor.util.settings import known_class_ids_annotation_predictor, \
     annotation_predictor_util_dir
 
 test_file = os.path.join(annotation_predictor_util_dir, 'test', 'testfiles', 'test.csv')
 test_ground_truth_reader = GroundTruthReader(test_file)
-test_classreader = ClassReader(class_ids_oid_file)
+test_classreader = ClassReader(known_class_ids_annotation_predictor)
 
 test_data = [
     OrderedDict(

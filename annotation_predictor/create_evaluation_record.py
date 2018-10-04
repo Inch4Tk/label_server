@@ -5,7 +5,7 @@ from datetime import datetime
 
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
 from annotation_predictor.util.settings import alpha, annotation_predictor_metadata_dir, \
-    class_ids_oid_file
+    known_class_ids_annotation_predictor
 from annotation_predictor.util.util import compute_label
 
 evaluation_record = {}
@@ -18,7 +18,7 @@ def create_evaluation_record(path_to_detection_record: str, path_to_gt: str):
         path_to_detection_record: detection-record created by create_detection_record.py
         path_to_gt: Ground-Truth-Data for the images which have been analyzed by the object-detector
     """
-    with open(class_ids_oid_file) as f:
+    with open(known_class_ids_annotation_predictor) as f:
         class_ids_oid = json.load(f)
     for cls in class_ids_oid:
         evaluation_record.update({cls: [0, 0]})

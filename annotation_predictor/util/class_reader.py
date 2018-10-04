@@ -15,7 +15,7 @@ class ClassReader:
         else:
             self.class_ids = {}
 
-    def get_class_from_id(self, id: str) -> str:
+    def get_class_from_id(self, id: str):
         """
         Args:
             id: ID, uniquely identifying a class.
@@ -24,8 +24,8 @@ class ClassReader:
         """
         try:
             return self.class_ids[id]
-        except KeyError as e:
-            raise KeyError('ImageID does not exist') from e
+        except KeyError:
+            return
 
     def get_index_of_class_from_id(self, id: str) -> int:
         """
@@ -72,7 +72,7 @@ class ClassReader:
         Args:
             cls: name of new class.
         """
-        new_class_key = len(self.class_ids) + 1
+        new_class_key = float(len(self.class_ids) + 1)
         self.class_ids[new_class_key] = cls
         with open(self.class_id_file, 'w') as file:
             json.dump(self.class_ids, file)

@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.settings import class_ids_oid_file
+from annotation_predictor.util.settings import known_class_ids_annotation_predictor
 
 def compute_feature_vector(detections: list, position: int) -> list:
     """
@@ -23,15 +23,16 @@ def compute_feature_vector(detections: list, position: int) -> list:
 
     Returns: feature vector with the above features
     """
-    class_reader = ClassReader(class_ids_oid_file)
+    class_reader = ClassReader(known_class_ids_annotation_predictor)
     detection = detections[position]
     score = float(detection['Confidence'])
     rel_size = get_rel_size(detection)
     avg = get_avg_score(detections)
     avg_dif = score - avg
     max_dif = get_max_score(detections) - score
-    class_index = class_reader.get_index_of_class_from_id(detection['LabelName'])
-    one_hot_encoding = np.zeros(len(class_reader.class_ids))
+    class_index = class_reader.get_index_of_class_from_label(detection['LabelName'])
+    # number of classes in oid dataset which is used for base training
+    one_hot_encoding = np.zeros(1000)
     one_hot_encoding[class_index] = 1
     feature_vector = [score, rel_size, avg, avg_dif, max_dif]
     feature_vector.extend(one_hot_encoding)

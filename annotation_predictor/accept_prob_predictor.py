@@ -51,7 +51,7 @@ def prob_model(x):
     return y
 
 def parse_tf_records(path_to_train_data):
-    train_datapoint = {'train/feature': tf.FixedLenFeature([606], tf.float32),
+    train_datapoint = {'train/feature': tf.FixedLenFeature([1005], tf.float32),
                        'train/label': tf.FixedLenFeature([1], tf.float32)}
     train_queue = tf.train.string_input_producer([path_to_train_data], num_epochs=50)
     train_reader = tf.TFRecordReader()
@@ -86,7 +86,7 @@ def main(mode: str, user_feedback=None, detections=None):
     existent_checkpoints = os.listdir(accept_prob_model_dir)
     existent_checkpoints.sort(key=int)
 
-    x = tf.placeholder(tf.float32, [None, 606])
+    x = tf.placeholder(tf.float32, [None, 1005])
     y = prob_model(x)
     _y = tf.placeholder(tf.float32, [None, 1])
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=_y))
@@ -137,7 +137,7 @@ def main(mode: str, user_feedback=None, detections=None):
             f = example.features.feature
             test_feat.append(np.asarray(f['test/feature'].float_list.value))
             test_lbl.append(f['test/label'].float_list.value[0])
-        test_feat = np.reshape(test_feat, (-1, 606))
+        test_feat = np.reshape(test_feat, (-1, 1005))
         test_lbl = np.reshape(test_lbl, (-1, 1))
 
         init_op = tf.group(tf.global_variables_initializer(),
@@ -168,7 +168,7 @@ def main(mode: str, user_feedback=None, detections=None):
                     print('No more Training Data available')
                     break
 
-                train_op.run(feed_dict={x: np.reshape(feat, (-1, 606)),
+                train_op.run(feed_dict={x: np.reshape(feat, (-1, 1005)),
                                         _y: np.reshape(lbl, (-1, 1))})
 
                 if batch_index % 100 == 0 or user_feedback:
@@ -227,7 +227,7 @@ def main(mode: str, user_feedback=None, detections=None):
             saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
 
             result = y.eval(feed_dict={
-                x: np.reshape(feature_data, (-1, 606))})
+                x: np.reshape(feature_data, (-1, 1005))})
             prediction = tf.round(result).eval()
 
         for i, val in enumerate(prediction):
@@ -252,7 +252,7 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument('--learning_rate', type=float,
                         help='learning rate (hyperparameter for training)',
-                        default=0.03)
+                        default=0.05)
     FLAGS, unparsed = parser.parse_known_args()
     args = parser.parse_args()
 

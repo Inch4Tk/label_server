@@ -1,12 +1,10 @@
 import argparse
-import json
 import os
 
 from PIL import Image, ImageDraw
 
 from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
-from annotation_predictor.util.settings import class_ids_oid_file
 
 def visualize_detection(path_to_image: str):
     """
@@ -14,8 +12,6 @@ def visualize_detection(path_to_image: str):
     Args:
         path_to_image: Image on which detections and predictions will be visualized.
     """
-    with open(class_ids_oid_file) as f:
-        class_ids_oid = json.load(f)
     det = send_od_request(path_to_image)
     pred = accept_prob_predictor.main('predict', detections=det)
     image_id = os.path.splitext(os.path.basename(path_to_image))[0]
@@ -29,7 +25,7 @@ def visualize_detection(path_to_image: str):
         y_min = det['YMin'] * height
         x_max = det['XMax'] * width
         y_max = det['YMax'] * height
-        draw.text(xy=(x_min, y_min), text=class_ids_oid[det['LabelName']], fill=color)
+        draw.text(xy=(x_min, y_min), text=det['LabelName'], fill=color)
         draw.text(xy=((x_min + x_max) / 2, (y_min + y_max) / 2), text=str(int(pred[i])), fill=color)
         for offset in [-1, 0, 1]:
             draw.rectangle(xy=[x_min + offset, y_min + offset, x_max + offset, y_max + offset],
