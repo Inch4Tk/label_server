@@ -38,10 +38,7 @@ def train():
             update_finetune_checkpoint(os.path.join(actual_checkpoint_dir, 'model.ckpt'))
             break
 
-        existent_checkpoints.remove(actual_checkpoint)
-        shutil.rmtree(actual_checkpoint_dir)
-
-    path_to_train_script = os.path.join(path_to_od_lib, 'model_main.py')
+    path_to_train_script = os.path.join(path_to_od_dir, 'model_main.py')
     path_to_export_script = os.path.join(path_to_od_lib, 'export_inference_graph.py')
 
     train_command = ['python', path_to_train_script, '--pipeline_config_path',
