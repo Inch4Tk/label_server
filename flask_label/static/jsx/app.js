@@ -58,23 +58,35 @@ const routes = [
             <ol>
                 <li>
                     Use "w, a, s, d, " or mouse clicks to mark the four extremas (top, bottom,
-                    leftmost, rightmost points) of an object
+                    leftmost, rightmost points) of an object.
+                    Tip 1: You can hold the button, adjust it to the corner and release it there.
+                    Tip 2: You can repress the "w, a, s, d" to adjust the corresponding point.
                 </li>
                 <li>
-                    When you are finished, press "e" to get to the next image, "q" to get to the
-                    image before or "r" to get to the next non-annotated image. You can also use the
-                    file-navigator on the left
+                    When you annotate an object which was not proposed by the application you have
+                    to enter its corresponding label. A dialog for this will open automatically when
+                    all four extreme points are present. When you start entering the label you get
+                    autocompletion proposals of classes the application already knows. You can
+                    select these by pressing the up- or down-arrow on your keyboard. When finished,
+                    press "Enter" to save the label. To cancel the labelling, press "ESC".
+                    Tip: You can neither label nor navigate via keyboard while in the labeling
+                    dialog. Enter the label or press "ESC" first.
+                </li>
+                <li>
+                    When you are finished with the current image, press "e" to get to the next
+                    image, "q" to get to the image before or "r" to get to the next
+                    non-annotated image. You can also use the file-navigator on the left.
                 </li>
                 <li>
                     You can always delete an annotation by clicking on its label on the right or by
                     pressing the corresponding number on your keyboard. In the same way you can also
-                    restore any annotation
+                    restore any deleted annotation.
                 </li>
                 <li>
-                    You can always redo the last task by pressing "u". This works multiple times.
+                    You can also redo the last task by pressing "u". This works multiple times.
                     Note that this also deletes the respective annotation.
-                    This does not work for non-detected objects that you annotated. For this,
-                    use the delete mechanism instead.
+                    This does not work for non-detected objects that you annotated. To delete those,
+                    use the delete mechanism mentioned above instead.
                 </li>
             </ol>)
     },

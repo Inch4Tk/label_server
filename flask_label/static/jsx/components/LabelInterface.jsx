@@ -1,6 +1,7 @@
 import React from "react";
 import {Link} from "react-router-dom"
 import {Redirect} from "react-router";
+import {AutoCompleter} from "../components/AutoCompleter.jsx"
 
 function render_filename(task, current_task) {
     if (task === current_task) {
@@ -93,7 +94,7 @@ class LabelInterface extends React.Component {
         this.task_id = undefined;
         this.image = undefined;
         this.resize_factor = undefined;
-        this.canvasRev = React.createRef();
+        this.canvasRef = React.createRef();
         this.was_trained = [];
         this.state = {
             classes: [],
@@ -103,15 +104,17 @@ class LabelInterface extends React.Component {
             predictions: [],
             instructions: [],
             redirect: undefined,
+            need_label: false
         };
         this.handle_click = this.handle_click.bind(this);
+        this.handle_submit = this.handle_submit.bind(this);
         this.track_mouse_position = this.track_mouse_position.bind(this);
         this.handle_keypress = this.handle_keypress.bind(this);
     }
 
     componentDidMount() {
         console.log("Component did mount");
-        document.addEventListener('keydown', this.handle_keypress);
+        document.addEventListener('keyup', this.handle_keypress);
 
         let task = this.props.task;
         this.task_id = task.id;
@@ -186,12 +189,17 @@ class LabelInterface extends React.Component {
 
     handle_click(event) {
         let newState = this.state;
+
+        if (newState.need_label) {
+            return;
+        }
+
         let ui = this.state.user_input;
         let img_width = this.image.width;
         let img_height = this.image.height;
         let new_width = img_width * this.resize_factor;
         let new_height = img_height * this.resize_factor;
-        let bounds = this.canvasRev.current.getBoundingClientRect();
+        let bounds = this.canvasRef.current.getBoundingClientRect();
         //handle clicks on border and map input to image coordinates
         let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
         let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
@@ -200,13 +208,7 @@ class LabelInterface extends React.Component {
             if (!ui[i]) {
                 ui[i] = [x, y];
                 this.setState({
-                    classes: newState.classes,
-                    boxes: newState.boxes,
-                    deleted: newState.deleted,
                     user_input: ui,
-                    predictions: newState.predictions,
-                    instructions: newState.instructions,
-                    redirect: newState.redirect
                 });
                 break;
             }
@@ -222,7 +224,7 @@ class LabelInterface extends React.Component {
             let img_height = this.image.height;
             let new_width = img_width * this.resize_factor;
             let new_height = img_height * this.resize_factor;
-            let bounds = this.canvasRev.current.getBoundingClientRect();
+            let bounds = this.canvasRef.current.getBoundingClientRect();
             let x = Math.min(Math.max(event.clientX - bounds.left, 10), new_width + 10) - 10;
             let y = Math.min(Math.max(event.clientY - bounds.top, 10), new_height + 10) - 10;
 
@@ -233,10 +235,27 @@ class LabelInterface extends React.Component {
     }
 
     handle_keypress(key) {
+        let newState = this.state;
         let kc = key.keyCode;
+
+        if (newState.need_label) {
+            if (kc === 27) {
+                this.was_trained.pop();
+                newState.need_label = false;
+                newState.deleted.pop();
+                newState.boxes.pop();
+
+                this.setState({
+                    boxes: newState.boxes,
+                    deleted: newState.deleted,
+                    need_label: newState.need_label
+                })
+            }
+            return;
+        }
+
         let {task, batch} = this.props;
         let task_ids = batch.tasks.map((t) => t.id);
-        let newState = this.state;
         let width = this.image.width;
         let height = this.image.height;
         let predictions = newState.predictions;
@@ -342,18 +361,34 @@ class LabelInterface extends React.Component {
 
             newState.instructions = get_instructions(get_open_prediction(predictions));
         }
+
         this.setState({
             classes: newState.classes,
             boxes: newState.boxes,
             deleted: newState.deleted,
             user_input: newState.user_input,
-            predictions: newState.predictions,
+            predictions: predictions,
             instructions: newState.instructions,
-            redirect: newState.redirect
+            redirect: newState.redirect,
         })
     }
 
-    render_image() {
+    handle_submit(event) {
+        event.preventDefault();
+        let label = this._auto_completer.getValue();
+        let newState = this.state;
+        newState.classes.push(label);
+        if (!this.props.known_classes.includes(label)) {
+            this.props.known_classes.push(label)
+        }
+
+        this.setState({
+            classes: newState.classes,
+            need_label: false
+        })
+    }
+
+    render_image(alpha) {
         try {
             console.log('Rendering image');
             let img_width = this.image.width;
@@ -370,7 +405,9 @@ class LabelInterface extends React.Component {
             let new_width = img_width * this.resize_factor;
             let new_height = img_height * this.resize_factor;
             let colors = ['red', 'blue', 'orange', 'purple', 'brown', 'turquoise'];
-            const ctx = this.canvasRev.current.getContext('2d');
+            const ctx = this.canvasRef.current.getContext('2d');
+            ctx.globalAlpha = alpha;
+            ctx.clearRect(0, 0, 1200, 800);
             ctx.drawImage(this.image, 10, 10, new_width, new_height);
             ctx.font = "20px Arial";
 
@@ -435,9 +472,10 @@ class LabelInterface extends React.Component {
 
     add_new_bounding_box() {
         let newState = this.state;
-        let ui = newState.user_input;
         let width = this.image.width;
         let height = this.image.height;
+        let ui = this.state.user_input;
+        let need_label = false;
         let x_min = Math.min(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let x_max = Math.max(ui[0][0], ui[1][0], ui[2][0], ui[3][0]);
         let y_min = Math.min(ui[0][1], ui[1][1], ui[2][1], ui[3][1]);
@@ -446,33 +484,34 @@ class LabelInterface extends React.Component {
         let new_box = [x_min, y_min, x_max, y_max];
 
         let pred = get_open_prediction(newState.predictions);
-        let c = undefined;
-        if (pred && pred['acceptance_prediction'] === 0) {
-            c = pred['LabelName'];
+
+        let is_annotation_request = pred && pred['acceptance_prediction'] === 0;
+
+        if (is_annotation_request) {
+            let cls = pred['LabelName'];
             //get relative box coordinates i.o. to compute IoU
             let b = new_box.slice();
             b[0] = b[0] / this.resize_factor / width;
             b[1] = b[1] / this.resize_factor / width;
             b[2] = b[2] / this.resize_factor / height;
             b[3] = b[3] / this.resize_factor / height;
-            let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === c);
+            let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === cls);
             pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
             pred['label_index'] = newState.classes.length;
-            let new_pred = get_open_prediction(newState.predictions);
-            newState.instructions = get_instructions(new_pred);
+            newState.classes.push(cls);
         }
+
         else {
-            c = prompt("Please enter the class of your label");
+            need_label = true;
         }
 
-        if (c) {
-            newState.boxes.push(new_box);
-            newState.classes.push(c);
-            newState.deleted.push(false);
-            this.was_trained.push(false)
-        }
-
+        let new_pred = get_open_prediction(newState.predictions);
+        newState.instructions = get_instructions(new_pred);
+        newState.boxes.push(new_box);
+        newState.deleted.push(false);
+        this.was_trained.push(false);
         this.has_changed = true;
+
         this.setState({
             classes: newState.classes,
             boxes: newState.boxes,
@@ -480,7 +519,7 @@ class LabelInterface extends React.Component {
             user_input: [undefined, undefined, undefined, undefined],
             predictions: newState.predictions,
             instructions: newState.instructions,
-            redirect: undefined,
+            need_label: need_label
         });
     }
 
@@ -493,9 +532,13 @@ class LabelInterface extends React.Component {
         let tasks = batch.tasks;
 
         console.log("rendering");
-        console.log(state);
 
-        this.render_image();
+        let alpha = 1.0;
+        if (state.need_label) {
+            alpha = 0.1
+        }
+
+        this.render_image(alpha);
 
         let image_list = tasks.map((t) =>
             <li key={t.id}>
@@ -518,6 +561,7 @@ class LabelInterface extends React.Component {
                         predictions: state.predictions,
                         instructions: state.instructions,
                         redirect: undefined,
+                        need_label: state.need_label
                     })
                 }}>{(is_deleted ? 'add ' : 'remove ') + (index + 1) + ': ' + state.classes[index]}
                 </button>
@@ -530,7 +574,7 @@ class LabelInterface extends React.Component {
             </li>
         );
 
-        return ([
+        let components = [
             <div key="1" className="filenav">
                 <ul>{image_list}</ul>
             </div>,
@@ -540,9 +584,23 @@ class LabelInterface extends React.Component {
             <div key="3">
                 <ul>{instruction_list}</ul>
             </div>,
-            <canvas key="4" ref={this.canvasRev} width="1200" height="800"
+            <div key="4">
+            <canvas ref={this.canvasRef} width="1200" height="800"
                     onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
-        ])
+            </div>
+        ];
+        if (state.need_label) {
+            components[3] =
+                <div key="4" className="wrapper">
+                    <canvas ref={this.canvasRef} width="1200" height="800"
+                            onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
+                    <form onSubmit={this.handle_submit}><AutoCompleter
+                        className="autocompleter" suggestions={['a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c',]}
+                        alwaysRenderSuggestions={true} ref={(ref) => this._auto_completer = ref}/>
+                    </form>
+                </div>
+        }
+        return (components)
     }
 }
 

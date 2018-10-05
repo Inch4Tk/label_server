@@ -99,6 +99,7 @@ export function updateStore(batch, id, labels, predictions) {
     let b = state.batches.imageBatches.find(x => x.id == batch);
     let task = b.tasks.find(x => x.id == id);
     let label = state.labels.annotations.find(x => x.id == id);
+    let known_classes = state.classes.classes;
 
     task['is_labeled'] = labels['boxes'].length > 0;
     label['classes'] = labels['classes'];
@@ -107,6 +108,13 @@ export function updateStore(batch, id, labels, predictions) {
     label['height'] = labels['height'];
     label['was_trained'] = labels['was_trained'];
     state.predictions.pred.find(x => x.id == id).predictions = predictions;
+
+    let cls_labels = labels['classes'];
+    for (let i = 0; i < cls_labels.length; i++)  {
+        if (!known_classes.includes(cls_labels[i])) {
+            known_classes.push(cls_labels[i])
+        }
+    }
 
     return {type: 'UPDATE_STORE', state: state}
 }

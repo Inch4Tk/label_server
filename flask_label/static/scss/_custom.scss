@@ -136,6 +136,11 @@ input[type=submit] {
     min-width: 10em;
 }
 
+.wrapper {
+    position: relative;
+}
+
+
 /* The sidebar menu */
 .filenav {
     height: 100%; /* Full-height: remove this if you want "auto" height */
@@ -159,6 +164,9 @@ input[type=submit] {
 
 /* When you mouse over the navigation links, change their color */
 .filenav a:hover {
+    -moz-box-shadow:10px 10px 20px #000000;
+    --webkit-box-shadow:10px 10px 20px #000000;
+    box-shadow:10px 10px 20px #000000;
     color: #f1f1f1;
 }
 
@@ -172,4 +180,21 @@ input[type=submit] {
     background-color: #111; /* Black */
     overflow-x: hidden; /* Disable horizontal scroll */
     padding-top: 20px;
+}
+
+.react-autosuggest__input {
+    position: absolute;
+    top: 50px;
+    left: 33%;
+}
+
+.react-autosuggest__suggestions-list {
+    position: absolute;
+    top: 100px;
+    left: 0;
+    height: 650px;
+    width: 1200px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
 }
