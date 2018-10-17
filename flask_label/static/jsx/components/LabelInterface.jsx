@@ -595,7 +595,7 @@ class LabelInterface extends React.Component {
                     <canvas ref={this.canvasRef} width="1200" height="800"
                             onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
                     <form onSubmit={this.handle_submit}><AutoCompleter
-                        className="autocompleter" suggestions={['a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c','a','b','c',]}
+                        className="autocompleter" suggestions={this.props.known_classes}
                         alwaysRenderSuggestions={true} ref={(ref) => this._auto_completer = ref}/>
                     </form>
                 </div>
