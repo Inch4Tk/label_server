@@ -7,7 +7,7 @@ from datetime import datetime
 import tensorflow as tf
 
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util.settings import alpha
+from settings import alpha
 from annotation_predictor.util.util import compute_feature_vector, compute_label
 
 def create_training_record(data_path: str, path_to_gt: str, ratio: float):

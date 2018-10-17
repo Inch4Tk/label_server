@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
-from annotation_predictor.util.settings import alpha, annotation_predictor_metadata_dir, \
+from settings import alpha, annotation_predictor_metadata_dir, \
     known_class_ids_annotation_predictor
 from annotation_predictor.util.util import compute_label
 

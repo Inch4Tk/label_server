@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 
-from annotation_predictor.util.settings import model_dir, path_to_pipeline_config, \
+from settings import model_dir, path_to_pipeline_config, \
     path_to_od_lib, path_to_od_dir
 from object_detector.util import update_finetune_checkpoint
 

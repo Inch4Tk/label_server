@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime
 
-from annotation_predictor.util.settings import annotation_predictor_metadata_dir
+from settings import annotation_predictor_metadata_dir
 
 def convert(path_to_csv: str):
     """

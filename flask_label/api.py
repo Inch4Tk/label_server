@@ -14,7 +14,7 @@ from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.class_reader import ClassReader
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
-from annotation_predictor.util.settings import known_class_ids_annotation_predictor, \
+from settings import known_class_ids_annotation_predictor, \
     known_class_ids_od
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required

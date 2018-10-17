@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.settings import known_class_ids_annotation_predictor
+from settings import known_class_ids_annotation_predictor
 
 def compute_feature_vector(detections: list, position: int) -> list:
     """

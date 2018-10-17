@@ -8,7 +8,7 @@ import tensorflow as tf
 from tensorflow.python.framework.errors_impl import OutOfRangeError
 from tensorflow.python.saved_model.simple_save import simple_save
 
-from annotation_predictor.util.settings import model_dir, path_to_test_data
+from settings import model_dir, path_to_test_data
 from annotation_predictor.util.util import compute_feature_vector, evaluate_prediction_record
 
 tf.logging.set_verbosity(tf.logging.INFO)

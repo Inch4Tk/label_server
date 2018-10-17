@@ -1,7 +1,7 @@
 import json
 
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.settings import known_class_ids_od, path_to_known_class_pbtxt, \
+from settings import known_class_ids_od, path_to_known_class_pbtxt, \
     path_to_pipeline_config
 
 def parse_class_ids_json_to_pbtxt():

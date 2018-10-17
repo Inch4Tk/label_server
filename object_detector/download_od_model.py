@@ -3,7 +3,7 @@ import shutil
 import tarfile
 import urllib.request as urllib
 
-from annotation_predictor.util.settings import model_dir
+from settings import model_dir
 
 def download_od_model():
     """
