@@ -89,14 +89,12 @@ def read_labels_from_xml(path):
         height: height of the respective image of the label
         classes: classes of annotated objects
         boxes: position of annotated objects
-        was_trained: boolean flag, indicating if label has been used for training already
     """
 
     width = '-1'
     height = '-1'
     classes = []
     boxes = []
-    was_trained = []
 
     if os.path.exists(path):
         tree = ET.parse(path)
@@ -109,13 +107,6 @@ def read_labels_from_xml(path):
 
         for name in root.findall('./object/name'):
             classes.append(name.text)
-
-        for name in root.findall('./object/was_trained'):
-            val = name.text
-            if val == 'True':
-                was_trained.append(True)
-            else:
-                was_trained.append(False)
 
         for i, xmin in enumerate(root.findall('./object/bndbox/xmin')):
             boxes.append([])
@@ -130,7 +121,7 @@ def read_labels_from_xml(path):
         for i, ymax in enumerate(root.findall('./object/bndbox/ymax')):
             boxes[i].append(int(ymax.text, 10))
 
-    return width, height, classes, boxes, was_trained
+    return width, height, classes, boxes
 
 def save_labels_to_xml(data, path):
     """
@@ -145,7 +136,6 @@ def save_labels_to_xml(data, path):
     boxes = data['boxes']
     width = data['width']
     height = data['height']
-    was_trained = data['was_trained']
 
     if len(classes) != 0:
         root = ET.Element('annotation')
@@ -157,7 +147,6 @@ def save_labels_to_xml(data, path):
         for i, c in enumerate(classes):
             obj = ET.SubElement(root, 'object')
             ET.SubElement(obj, 'name').text = c
-            ET.SubElement(obj, 'was_trained').text = str(was_trained[i])
             box = ET.SubElement(obj, 'bndbox')
             ET.SubElement(box, 'xmin').text = str(round(boxes[i][0]))
             ET.SubElement(box, 'ymin').text = str(round(boxes[i][1]))
@@ -304,14 +293,13 @@ def serve_labels():
         for task in batch['tasks']:
             label_path = get_path_to_label(task['id'])
 
-            width, height, classes, boxes, was_trained = read_labels_from_xml(label_path)
+            width, height, classes, boxes = read_labels_from_xml(label_path)
 
             labels.append({'id': str(task['id']),
                            'classes': classes,
                            'boxes': boxes,
                            'width': width,
-                           'height': height,
-                           'was_trained': was_trained})
+                           'height': height})
 
     return jsonify(labels)
 
@@ -437,6 +425,7 @@ def serve_classes():
 @api_login_required
 def train_models():
     """Checks instance folder for new training data and uses it to further train models"""
+    nr_of_labels = 0
     feature_vectors = []
     y_ = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
@@ -450,30 +439,25 @@ def train_models():
         for task in batch['tasks']:
             label_path = get_path_to_label(task['id'])
             if os.path.exists(label_path):
-                image_path = get_path_to_image(task['id'])
-                width, height, classes, boxes, was_trained = read_labels_from_xml(label_path)
-
+                width, height, classes, boxes = read_labels_from_xml(label_path)
                 for i, cls in enumerate(classes):
-                    if not was_trained[i]:
-                        class_id_od = class_reader_od.get_index_of_class_from_label(cls)
-                        if class_id_od == -1:
-                            class_reader_od.add_class_to_file(cls)
-                            parse_class_ids_json_to_pbtxt()
-                            update_number_of_classes()
+                    nr_of_labels += 1
+                    image_path = get_path_to_image(task['id'])
 
-                        class_id_accept_prob = class_reader_acc_prob.get_index_of_class_from_label(
-                            cls)
-                        if class_id_accept_prob == -1:
-                            class_reader_acc_prob.add_class_to_file(cls)
+                    class_id_od = class_reader_od.get_index_of_class_from_label(cls)
+                    if class_id_od == -1:
+                        class_reader_od.add_class_to_file(cls)
+                        parse_class_ids_json_to_pbtxt()
+                        update_number_of_classes()
 
-                        tf_example = create_tf_example(
-                            [width, height, task['filename'], image_path, classes, boxes])
-                        writer.write(tf_example.SerializeToString())
+                    class_id_accept_prob = class_reader_acc_prob.get_index_of_class_from_label(
+                        cls)
+                    if class_id_accept_prob == -1:
+                        class_reader_acc_prob.add_class_to_file(cls)
 
-                        save_labels_to_xml(
-                            {'width': width, 'height': height, 'classes': classes, 'boxes': boxes,
-                             'was_trained': [True] * len(classes)},
-                            label_path)
+                    tf_example = create_tf_example(
+                        [width, height, task['filename'], image_path, classes, boxes])
+                    writer.write(tf_example.SerializeToString())
 
             pred_path = get_path_to_prediction(task['id'])
             if os.path.exists(pred_path):
@@ -499,6 +483,8 @@ def train_models():
 
     if len(feature_vectors) > 0:
         accept_prob_predictor.main(mode='train', user_feedback={'x': feature_vectors, 'y_': y_})
-    train_od_model.train()
+
+    if nr_of_labels > 0:
+        train_od_model.train()
 
     return jsonify(success=True)

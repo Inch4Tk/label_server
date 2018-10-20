@@ -16,7 +16,14 @@ import thunkMiddleware from 'redux-thunk'
 import {Provider} from 'react-redux'
 import {applyMiddleware, createStore} from "redux"
 import rootReducer from "./reducers";
-import {fetchBatches, fetchClasses, fetchLabels, fetchPredictions} from "./actions";
+import {
+    fetchBatches,
+    fetchClasses,
+    fetchLabels,
+    fetchPredictions,
+    trainModels,
+    setIsNotTraining
+} from "./actions";
 
 // All our routes
 const routes = [
@@ -134,12 +141,15 @@ ReactDOM.render(
 
 // Fetch information about image/video-batches, already existing labels, object- and annotation-
 // predictions
+
 Promise.all([
     store.dispatch(fetchBatches()),
     store.dispatch(fetchLabels()),
     store.dispatch(fetchPredictions()),
-    store.dispatch(fetchClasses())
+    store.dispatch(fetchClasses()),
+    store.dispatch(setIsNotTraining())
 ]).then(() => {
+    store.subscribe(trainModels);
     console.log('Initialized store');
 
     // Put the SPA to the document root

@@ -45,6 +45,18 @@ const receiveClasses = (data) => ({
     data: data
 });
 
+export const IS_TRAINING = "IS_TRAINING";
+const isTraining = () => ({
+    type: IS_TRAINING,
+    data: true
+});
+
+export const IS_NOT_TRAINING = "IS_NOT_TRAINING";
+const isNotTraining = () => ({
+    type: IS_NOT_TRAINING,
+    data: false
+});
+
 export function fetchBatches() {
     // Async call to /api/batches, using thunk middleware (aka returning a function)
     return function (dispatch) {
@@ -106,17 +118,28 @@ export function updateStore(batch, id, labels, predictions) {
     label['boxes'] = labels['boxes'];
     label['width'] = labels['width'];
     label['height'] = labels['height'];
-    label['was_trained'] = labels['was_trained'];
     state.predictions.pred.find(x => x.id == id).predictions = predictions;
 
     let cls_labels = labels['classes'];
-    for (let i = 0; i < cls_labels.length; i++)  {
+    for (let i = 0; i < cls_labels.length; i++) {
         if (!known_classes.includes(cls_labels[i])) {
             known_classes.push(cls_labels[i])
         }
     }
 
     return {type: 'UPDATE_STORE', state: state}
+}
+
+export function setIsTraining() {
+    return function (dispatch) {
+        dispatch(isTraining());
+    }
+}
+
+export function setIsNotTraining() {
+    return function (dispatch) {
+        dispatch(isNotTraining());
+    }
 }
 
 function saveLabels(id, labels) {
@@ -139,54 +162,45 @@ function savePredictions(id, predictions) {
     });
 }
 
-function getNumberofTrainableLabels() {
-    let state = store.getState();
-    let nr_of_trainable_labels = 0;
-    for (let i = 0; i < state.labels.annotations.length; i++) {
-        let label = state.labels.annotations[i];
-        for (let j = 0; j < label.was_trained.length; j++) {
-            if (label.was_trained[j] === false) {
-                nr_of_trainable_labels++;
-            }
-        }
-    }
-    return nr_of_trainable_labels
-}
-
 function saveLabelsandPrediction(id, labels, predictions) {
     return Promise.all([saveLabels(id, labels), savePredictions(id, predictions)])
 }
 
-function trainModels(nr_of_trainable_labels) {
-    if(nr_of_trainable_labels > 49) {
+export function trainModels() {
+    let state = store.getState();
+    console.log(state.is_training.isTraining);
+    if (!state.is_training.isTraining) {
+        store.dispatch(setIsTraining());
         return fetch('/api/train_models/')
             .then(
                 response => response.json(),
                 error => console.log('An error occurred.', error)
             )
-    }
-    else {
-        console.log('Not enough labels to train: ' + nr_of_trainable_labels + ' of 50')
+            .then(
+                () => {
+                    store.dispatch(updatePredictions())
+                        .then(store.dispatch(setIsNotTraining()))
+                }
+            )
     }
 }
 
-function updatePredictions(nr_of_trainable_labels) {
-    if(nr_of_trainable_labels > 49) {
+function updatePredictions() {
+    return function (dispatch) {
+        dispatch(requestPredictions());
         return fetch("/api/update_predictions/")
             .then(
                 response => response.json(),
-                error => console.log('An error occurred.', error)
-            )
+                error => console.log('An error occurred.', error))
+            .then(json => dispatch(receivePredictions(json)))
     }
-    console.log('Not enough labels to update predictions: ' + nr_of_trainable_labels + ' of 50')
 }
 
 export function updateBackend(id, labels, predictions) {
-    // Save data to backend and retrain models with new data
-    let nr_of_trainable_labels = getNumberofTrainableLabels();
+    // Save data to backend and retrain models with new dat
+    let state = store.getState();
+    let is_training = state.is_training.isTraining;
     saveLabelsandPrediction(id, labels, predictions)
-        .then(trainModels(nr_of_trainable_labels))
-        .then(updatePredictions(nr_of_trainable_labels));
-
+        .then(() => trainModels());
     return {type: 'UPDATE_BACKEND', state: store.getState()}
 }

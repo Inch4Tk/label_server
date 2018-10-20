@@ -95,7 +95,6 @@ class LabelInterface extends React.Component {
         this.image = undefined;
         this.resize_factor = undefined;
         this.canvasRef = React.createRef();
-        this.was_trained = [];
         this.state = {
             classes: [],
             boxes: [],
@@ -120,10 +119,6 @@ class LabelInterface extends React.Component {
         this.task_id = task.id;
         this.image = this.load_image("/api/serve_image/" + task.id + "/");
         let labels = this.props.labels;
-
-        if (this.props.labels.was_trained) {
-            this.was_trained = this.props.labels.was_trained;
-        }
 
         let predictions = this.props.predictions;
         let deleted = [];
@@ -162,7 +157,6 @@ class LabelInterface extends React.Component {
                 if (this.state.deleted[i]) {
                     boxes.splice(current, 1);
                     classes.splice(current, 1);
-                    this.was_trained.splice(current, 1)
                 }
                 else {
                     current++;
@@ -178,7 +172,6 @@ class LabelInterface extends React.Component {
             let label_data = {
                 'classes': classes,
                 'boxes': boxes,
-                'was_trained': this.was_trained,
                 'width': this.image.width,
                 'height': this.image.height
             };
@@ -240,7 +233,6 @@ class LabelInterface extends React.Component {
 
         if (newState.need_label) {
             if (kc === 27) {
-                this.was_trained.pop();
                 newState.need_label = false;
                 newState.deleted.pop();
                 newState.boxes.pop();
@@ -356,7 +348,6 @@ class LabelInterface extends React.Component {
                     pred['XMax'] * this.resize_factor * width,
                     pred['YMax'] * this.resize_factor * height]);
                 newState.deleted.push(false);
-                this.was_trained.push(false);
             }
 
             newState.instructions = get_instructions(get_open_prediction(predictions));
@@ -509,7 +500,6 @@ class LabelInterface extends React.Component {
         newState.instructions = get_instructions(new_pred);
         newState.boxes.push(new_box);
         newState.deleted.push(false);
-        this.was_trained.push(false);
         this.has_changed = true;
 
         this.setState({
