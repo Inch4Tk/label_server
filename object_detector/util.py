@@ -13,11 +13,12 @@ def parse_class_ids_json_to_pbtxt():
     s = ' '
     out = ''
     for id in ids:
-        cls = data[id]
-        out += 'item' + s + '{' + end
-        out += s * 2 + 'id:' + ' ' + str(int(float(id))) + end
-        out += s * 2 + 'name:' + ' ' + '\'' + cls + '\'' + end
-        out += '}' + end * 2
+        if id is not None:
+            cls = data[id]
+            out += 'item' + s + '{' + end
+            out += s * 2 + 'id:' + ' ' + str(int(float(id))) + end
+            out += s * 2 + 'name:' + ' ' + '\'' + cls + '\'' + end
+            out += '}' + end * 2
 
     with open(path_to_known_class_pbtxt, 'w') as f:
         f.write(out)

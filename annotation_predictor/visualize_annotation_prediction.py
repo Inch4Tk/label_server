@@ -4,7 +4,7 @@ import os
 from PIL import Image, ImageDraw
 
 from annotation_predictor import accept_prob_predictor
-from annotation_predictor.send_od_request import send_od_request
+from object_detector.send_od_request import send_od_request
 
 def visualize_detection(path_to_image: str):
     """

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from PIL import Image
 
-from annotation_predictor.send_od_request import send_od_request
+from object_detector.send_od_request import send_od_request
 from settings import annotation_predictor_metadata_dir
 
 def create_detection_record(path_to_images: str, path_to_json=None):
@@ -14,7 +14,8 @@ def create_detection_record(path_to_images: str, path_to_json=None):
 
     Args:
         path_to_images: Path to a directory which contains the images to be analysed.
-        path_to_json: Path to an existent json to which the detections will be appended.
+        path_to_json: Path for the new file or to an existent json to which the detections will be
+        appended.
     """
     if path_to_json is None:
         images = os.listdir(path_to_images)

@@ -15,9 +15,9 @@ def train():
     existent_checkpoints.sort(key=int)
 
     # remove incomplete checkpoints
-    for chkpt in existent_checkpoints:
+    for ckpt in existent_checkpoints:
         is_legit = False
-        path_to_ckpt = os.path.join(od_model_dir, chkpt)
+        path_to_ckpt = os.path.join(od_model_dir, ckpt)
         chkpt_files = os.listdir(path_to_ckpt)
         for f in chkpt_files:
             if fnmatch.fnmatch(f, 'saved_model.pb'):
@@ -26,9 +26,14 @@ def train():
 
         if not is_legit:
             shutil.rmtree(path_to_ckpt)
-            existent_checkpoints.remove(chkpt)
+            existent_checkpoints.remove(ckpt)
 
-    actual_checkpoint = str(len(existent_checkpoints))
+    # only keep last 10 checkpoints
+    if len(existent_checkpoints) > 10:
+        path_to_ckpt = os.path.join(od_model_dir, existent_checkpoints[0])
+        shutil.rmtree(path_to_ckpt)
+
+    actual_checkpoint = existent_checkpoints[-1]
     actual_checkpoint_dir = os.path.join(od_model_dir, actual_checkpoint)
     new_checkpoint_dir = os.path.join(od_model_dir, str(int(actual_checkpoint) + 1))
 

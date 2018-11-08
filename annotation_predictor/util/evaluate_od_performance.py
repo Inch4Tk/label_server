@@ -3,6 +3,7 @@ import os
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
 from annotation_predictor.util.oid_classcode_reader import OIDClassCodeReader
 from annotation_predictor.util.util import compute_iou
+from object_detector.send_od_request import send_od_request
 from settings import alpha
 
 evaluation_record = {}
