@@ -105,6 +105,17 @@ export function fetchPredictions() {
     }
 }
 
+function updatePredictions(batch_id) {
+    return function (dispatch) {
+        dispatch(requestPredictions());
+        return fetch("/api/update_predictions/" + batch_id + "/")
+            .then(
+                response => response.json(),
+                error => console.log('An error occurred.', error))
+            .then(json => dispatch(receivePredictions(json)))
+    }
+}
+
 export function updateStore(batch, id, labels, predictions) {
     // Save data to redux store
     let state = store.getState();
@@ -166,9 +177,8 @@ function saveLabelsandPrediction(id, labels, predictions) {
     return Promise.all([saveLabels(id, labels), savePredictions(id, predictions)])
 }
 
-export function trainModels() {
+export function trainModels(batch_id) {
     let state = store.getState();
-    console.log(state.is_training.isTraining);
     if (!state.is_training.isTraining) {
         store.dispatch(setIsTraining());
         return fetch('/api/train_models/')
@@ -178,7 +188,7 @@ export function trainModels() {
             )
             .then(
                 () => {
-                    store.dispatch(updatePredictions())
+                    store.dispatch(updatePredictions(batch_id))
                         .then(store.dispatch(setIsNotTraining()))
                 }
             )

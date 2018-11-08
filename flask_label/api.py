@@ -13,9 +13,8 @@ from object_detection.utils import dataset_util
 from annotation_predictor import accept_prob_predictor
 from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.class_reader import ClassReader
+from annotation_predictor.util.evaluate_od_performance import evaluate_od_performance
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
-from settings import known_class_ids_annotation_predictor, \
-    known_class_ids_od
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
 from flask_label.database import db
@@ -25,6 +24,9 @@ from flask_label.models import (
 )
 from object_detector import train_od_model
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
+from settings import known_class_ids_annotation_predictor, \
+    class_ids_od, path_to_label_performance_log, path_to_od_test_data, \
+    path_to_model_performance_log, annotation_predictor_metadata_dir
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -35,11 +37,10 @@ def batch_statistics(batch):
         if task["is_labeled"]:
             lc += 1
 
-    return (len(batch["tasks"]), lc)
+    return len(batch["tasks"]), lc
 
-def get_path_to_image(img_id):
+def get_path_to_image(img_id: int):
     img_task = ImageTask.query.filter_by(id=img_id).first()
-
     img_path = os.path.join(
         current_app.instance_path,
         current_app.config["IMAGE_DIR"],
@@ -49,9 +50,8 @@ def get_path_to_image(img_id):
 
     return img_path
 
-def get_path_to_label(img_id):
+def get_path_to_label(img_id: int):
     img_task = ImageTask.query.filter_by(id=img_id).first()
-
     path = os.path.join(
         current_app.instance_path,
         current_app.config['IMAGE_DIR'],
@@ -64,9 +64,8 @@ def get_path_to_label(img_id):
 
     return path
 
-def get_path_to_prediction(img_id):
+def get_path_to_prediction(img_id: int):
     img_task = ImageTask.query.filter_by(id=img_id).first()
-
     pred_dir_path = os.path.join(
         current_app.instance_path,
         current_app.config["IMAGE_DIR"],
@@ -362,36 +361,35 @@ def serve_predictions():
 
     return jsonify(predictions)
 
-@bp.route('/update_predictions/')
+@bp.route('/update_predictions/<int:batch_id>/')
 @api_login_required
-def update_predictions():
-    """Updates predictions for all images from the instance folder"""
+def update_predictions(batch_id):
+    """Updates predictions for images in instance folder"""
+    db_update_task()
     predictions = []
-    img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
-    image_batch_data = image_batch_schema.dump(img_batches, many=True)
-    for batch in image_batch_data:
-        for task in batch['tasks']:
-            img_path = get_path_to_image(task['id'])
-            pred_path = get_path_to_prediction(task['id'])
+    batch = ImageBatch.query.filter_by(id=batch_id).all()
+    batch_data = image_batch_schema.dump(batch, many=True)
 
-            prediction = send_od_request(img_path)
-            prediction = list(prediction.values())[0]
-            if len(prediction) > 0:
-                feature_vectors = []
-                for i, _ in enumerate(prediction):
-                    feature_vectors.append(compute_feature_vector(prediction, i))
-                acceptance_prediction = send_accept_prob_request(feature_vectors)
-                for i, p in enumerate(acceptance_prediction):
-                    prediction[i]['acceptance_prediction'] = p
-                prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True)
+    for task in batch_data[0]['tasks']:
+        img_path = get_path_to_image(task['id'])
+        pred_path = get_path_to_prediction(task['id'])
 
-            predictions.append({'id': str(task['id']), 'predictions': prediction})
+        prediction = send_od_request(img_path)
+        prediction = list(prediction.values())[0]
+        if len(prediction) > 0:
+            feature_vectors = []
+            for i, _ in enumerate(prediction):
+                feature_vectors.append(compute_feature_vector(prediction, i))
+            acceptance_prediction = send_accept_prob_request(feature_vectors)
+            for i, p in enumerate(acceptance_prediction):
+                prediction[i]['acceptance_prediction'] = p
+            prediction.sort(key=lambda p: p['acceptance_prediction'], reverse=True)
+        predictions.append({'id': str(task['id']), 'predictions': prediction})
 
-            if not os.path.exists(os.path.dirname(pred_path)):
-                os.mkdir(os.path.dirname(pred_path))
-            with open(pred_path, 'w') as f:
-                json.dump(prediction, f)
-
+        if not os.path.exists(os.path.dirname(pred_path)):
+            os.mkdir(os.path.dirname(pred_path))
+        with open(pred_path, 'w') as f:
+            json.dump(prediction, f)
     return jsonify(predictions)
 
 @bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
