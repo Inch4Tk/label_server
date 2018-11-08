@@ -36,9 +36,9 @@ const mapStateToProps = (state, {match}) => {
 };
 
 const mapDispatchToProps = dispatch => ({
-    save_data: (batch_id, task_id, labels, predictions) => {
+    save_data: (batch_id, task_id, labels, predictions, log) => {
         dispatch(updateStore(batch_id, task_id, labels, predictions));
-        dispatch(updateBackend(batch_id, task_id, labels, predictions))
+        dispatch(updateBackend(batch_id, task_id, labels, predictions, log))
     }
 });
 

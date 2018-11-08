@@ -95,6 +95,7 @@ class LabelInterface extends React.Component {
         this.image = undefined;
         this.resize_factor = undefined;
         this.canvasRef = React.createRef();
+        this.log = [];
         this.state = {
             classes: [],
             boxes: [],
@@ -103,7 +104,7 @@ class LabelInterface extends React.Component {
             predictions: [],
             instructions: [],
             redirect: undefined,
-            need_label: false
+            need_label: false,
         };
         this.handle_click = this.handle_click.bind(this);
         this.handle_submit = this.handle_submit.bind(this);
@@ -112,7 +113,6 @@ class LabelInterface extends React.Component {
     }
 
     componentDidMount() {
-        console.log("Component did mount");
         document.addEventListener('keyup', this.handle_keypress);
 
         let task = this.props.task;
@@ -144,7 +144,6 @@ class LabelInterface extends React.Component {
     }
 
     componentWillUnmount() {
-        console.log("Component will unmount");
         document.removeEventListener('keydown', this.handle_keypress);
         if (this.has_changed) {
             //do not save annotations that are deleted at this point
@@ -176,7 +175,7 @@ class LabelInterface extends React.Component {
                 'height': this.image.height
             };
 
-            this.props.save_data(this.props.batch.id, this.task_id, label_data, prediction_data);
+            this.props.save_data(this.props.batch.id, this.task_id, label_data, prediction_data, this.log);
         }
     }
 
@@ -334,6 +333,7 @@ class LabelInterface extends React.Component {
                 //don't care about falsified annotation proposals as it was fault of object detector
                 //still set variable to true to mark this proposal as complete
                 pred['was_successful'] = (pred['acceptance_prediction'] === 0);
+                this.log.push([new Date().getTime(), -2]);
             }
 
             //V: verify a proposal
@@ -348,6 +348,7 @@ class LabelInterface extends React.Component {
                     pred['XMax'] * this.resize_factor * width,
                     pred['YMax'] * this.resize_factor * height]);
                 newState.deleted.push(false);
+                this.log.push([new Date().getTime(), 2]);
             }
 
             newState.instructions = get_instructions(get_open_prediction(predictions));
@@ -373,15 +374,16 @@ class LabelInterface extends React.Component {
             this.props.known_classes.push(label)
         }
 
+        this.log.push([new Date().getTime(), 0]);
+
         this.setState({
             classes: newState.classes,
-            need_label: false
+            need_label: false,
         })
     }
 
     render_image(alpha) {
         try {
-            console.log('Rendering image');
             let img_width = this.image.width;
             let img_height = this.image.height;
             let b = this.state.boxes;
@@ -416,7 +418,7 @@ class LabelInterface extends React.Component {
             ctx.stroke();
 
             //render finished and non-deleted bounding boxes
-            for (let i = 0; i < b.length; i++) {
+            for (let i = 0; i < c.length; i++) {
                 ctx.beginPath();
                 ctx.lineWidth = 3;
                 ctx.fillStyle = colors[i % colors.length];
@@ -490,6 +492,13 @@ class LabelInterface extends React.Component {
             pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
             pred['label_index'] = newState.classes.length;
             newState.classes.push(cls);
+
+            if (pred['was_successful']) {
+                this.log.push([new Date().getTime(), 1]);
+            }
+            else {
+                this.log.push([new Date().getTime(), -1]);
+            }
         }
 
         else {
@@ -509,7 +518,7 @@ class LabelInterface extends React.Component {
             user_input: [undefined, undefined, undefined, undefined],
             predictions: newState.predictions,
             instructions: newState.instructions,
-            need_label: need_label
+            need_label: need_label,
         });
     }
 
@@ -520,8 +529,6 @@ class LabelInterface extends React.Component {
         let state = this.state;
         let {task, batch} = this.props;
         let tasks = batch.tasks;
-
-        console.log("rendering");
 
         let alpha = 1.0;
         if (state.need_label) {
@@ -575,8 +582,8 @@ class LabelInterface extends React.Component {
                 <ul>{instruction_list}</ul>
             </div>,
             <div key="4">
-            <canvas ref={this.canvasRef} width="1200" height="800"
-                    onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
+                <canvas ref={this.canvasRef} width="1200" height="800"
+                        onClick={this.handle_click} onMouseMove={this.track_mouse_position}/>
             </div>
         ];
         if (state.need_label) {

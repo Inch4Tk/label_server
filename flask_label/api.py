@@ -26,7 +26,7 @@ from object_detector import train_od_model
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 from settings import known_class_ids_annotation_predictor, \
     class_ids_od, path_to_label_performance_log, path_to_od_test_data, \
-    path_to_model_performance_log, annotation_predictor_metadata_dir
+    path_to_model_performance_log, path_to_od_test_data_gt
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -408,6 +408,42 @@ def save_predictions(img_id):
 
     with open(pred_path, 'w') as f:
         json.dump(result, f)
+
+    return jsonify(success=True)
+
+@bp.route('/update_label_performance_log/', methods=['POST'])
+@api_login_required
+def update_label_performance_log():
+    new_log_data = request.get_json()
+    log_data = []
+
+    if os.path.exists(path_to_label_performance_log):
+        with open(path_to_label_performance_log, 'r') as f:
+            log_data = json.load(f)
+
+    log_data.extend(new_log_data)
+
+    with open(path_to_label_performance_log, 'w') as f:
+        json.dump(log_data, f)
+
+    return jsonify(success=True)
+
+@bp.route('/update_model_performance_log/')
+@api_login_required
+def update_model_performance_log():
+    model_performance = evaluate_od_performance(os.path.join(path_to_od_test_data, 'Tomato'),
+                                                path_to_od_test_data_gt)
+
+    log_data = []
+
+    if os.path.exists(path_to_model_performance_log):
+        with open(path_to_model_performance_log, 'r') as f:
+            log_data = json.load(f)
+
+    log_data.append(model_performance)
+
+    with open(path_to_model_performance_log, 'w') as f:
+        json.dump(log_data, f)
 
     return jsonify(success=True)
 

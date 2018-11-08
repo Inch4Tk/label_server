@@ -173,8 +173,28 @@ function savePredictions(id, predictions) {
     });
 }
 
-function saveLabelsandPrediction(id, labels, predictions) {
-    return Promise.all([saveLabels(id, labels), savePredictions(id, predictions)])
+function updateLabelPerformanceLog(log) {
+    return fetch('/api/update_label_performance_log/', {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify(log)
+    });
+}
+
+function updateModelPerformanceLog() {
+    return fetch('/api/update_model_performance_log/')
+        .then(
+            response => response.json(),
+            error => console.log('An error occurred.', error)
+        );
+}
+
+function updateMetadata(id, labels, predictions, log) {
+    return Promise.all([saveLabels(id, labels),
+        savePredictions(id, predictions),
+        updateLabelPerformanceLog(log)])
 }
 
 export function trainModels(batch_id) {
@@ -189,28 +209,19 @@ export function trainModels(batch_id) {
             .then(
                 () => {
                     store.dispatch(updatePredictions(batch_id))
+                        .then(updateModelPerformanceLog())
                         .then(store.dispatch(setIsNotTraining()))
                 }
             )
     }
 }
 
-function updatePredictions() {
-    return function (dispatch) {
-        dispatch(requestPredictions());
-        return fetch("/api/update_predictions/")
-            .then(
-                response => response.json(),
-                error => console.log('An error occurred.', error))
-            .then(json => dispatch(receivePredictions(json)))
-    }
-}
+export function updateBackend(batch_id, task_id, labels, predictions, log) {
+    // Save data to backend and retrain models with new data
+    updateMetadata(task_id, labels, predictions, log)
+        .then(() => {
+            trainModels(batch_id)
+        });
 
-export function updateBackend(id, labels, predictions) {
-    // Save data to backend and retrain models with new dat
-    let state = store.getState();
-    let is_training = state.is_training.isTraining;
-    saveLabelsandPrediction(id, labels, predictions)
-        .then(() => trainModels());
     return {type: 'UPDATE_BACKEND', state: store.getState()}
 }
