@@ -21,7 +21,6 @@ import {
     fetchClasses,
     fetchLabels,
     fetchPredictions,
-    trainModels,
     setIsNotTraining
 } from "./actions";
 
@@ -149,7 +148,6 @@ Promise.all([
     store.dispatch(fetchClasses()),
     store.dispatch(setIsNotTraining())
 ]).then(() => {
-    store.subscribe(trainModels);
     console.log('Initialized store');
 
     // Put the SPA to the document root

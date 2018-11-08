@@ -75,7 +75,7 @@ def get_max_score(detections: list) -> float:
             max_score = conf
     return max_score
 
-def compute_iou(det_a: OrderedDict, det_b: OrderedDict) -> float:
+def compute_iou(det_a: dict, det_b: dict) -> float:
     """
     Args:
         det_a: First detection

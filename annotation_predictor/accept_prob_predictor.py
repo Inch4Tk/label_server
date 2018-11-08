@@ -77,6 +77,7 @@ def main(mode: str, user_feedback=None, detections=None):
         detections: Used in detection-mode to give a list of detections
         for which predictions should be generated.
     """
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
 
     accept_prob_model_dir = os.path.join(model_dir, 'accept_prob_predictor')
 
@@ -120,7 +121,7 @@ def main(mode: str, user_feedback=None, detections=None):
         # live train mode with user feedback
         else:
             iterations = 1
-            learning_rate = 0.1
+            learning_rate = 0.01
             batch_size = 64
             train_features, train_labels = tf.train.shuffle_batch([user_feedback['x'],
                                                                    user_feedback['y_']],
@@ -151,7 +152,7 @@ def main(mode: str, user_feedback=None, detections=None):
         best_acc_ver = 0.0
         early_stopping_counter = 0
 
-        with tf.Session() as sess:
+        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
             sess.run(init_op)
 
@@ -223,7 +224,7 @@ def main(mode: str, user_feedback=None, detections=None):
             for i, _ in enumerate(detections[key]):
                 feature_data.append(compute_feature_vector(detections[key], i))
 
-        with tf.Session() as sess:
+        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))
 
             result = y.eval(feed_dict={

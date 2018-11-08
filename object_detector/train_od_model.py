@@ -20,7 +20,7 @@ def train():
         path_to_ckpt = os.path.join(od_model_dir, chkpt)
         chkpt_files = os.listdir(path_to_ckpt)
         for f in chkpt_files:
-            if fnmatch.fnmatch(f, 'model.ckpt*'):
+            if fnmatch.fnmatch(f, 'saved_model.pb'):
                 is_legit = True
                 break
 

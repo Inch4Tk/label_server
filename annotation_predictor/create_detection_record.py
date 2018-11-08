@@ -37,7 +37,7 @@ def create_detection_record(path_to_images: str, path_to_json=None):
 
     for i, image in enumerate(images):
         if (i % 100) == 0:
-            with open(path_to_json, 'r+') as f:
+            with open(path_to_json, 'w') as f:
                 json.dump(result, f)
             print('Evaluated {} of {} images'.format(i, total_images))
 
