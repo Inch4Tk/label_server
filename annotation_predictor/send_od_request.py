@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow_serving.apis import predict_pb2, prediction_service_pb2_grpc
 
 from annotation_predictor.util.class_reader import ClassReader
-from settings import known_class_ids_od
+from settings import class_ids_od
 from annotation_predictor.util.util import load_image
 
 def send_od_request(path_to_image: str):
@@ -39,7 +39,7 @@ def send_od_request(path_to_image: str):
     image_id = os.path.splitext(filename)[0]
 
     result = {image_id: []}
-    class_reader = ClassReader(known_class_ids_od)
+    class_reader = ClassReader(class_ids_od)
     for i, cls in enumerate(classes):
         confidence = scores[i]
 

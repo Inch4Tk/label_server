@@ -1,11 +1,11 @@
 import json
 
 from annotation_predictor.util.class_reader import ClassReader
-from settings import known_class_ids_od, path_to_known_class_pbtxt, \
+from settings import class_ids_od, path_to_known_class_pbtxt, \
     path_to_pipeline_config
 
 def parse_class_ids_json_to_pbtxt():
-    with open(known_class_ids_od, 'r') as f:
+    with open(class_ids_od, 'r') as f:
         data = json.load(f)
     ids = list(data.keys())
     ids.sort()
@@ -23,7 +23,7 @@ def parse_class_ids_json_to_pbtxt():
         f.write(out)
 
 def update_number_of_classes():
-    class_reader = ClassReader(known_class_ids_od)
+    class_reader = ClassReader(class_ids_od)
     nr_of_classes = len(class_reader.class_ids)
     with open(path_to_pipeline_config, 'r') as f:
         data = f.readlines()

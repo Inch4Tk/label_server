@@ -415,7 +415,7 @@ def save_predictions(img_id):
 @api_login_required
 def serve_classes():
     """Serves classes for all images from the instance folder"""
-    class_reader = ClassReader(known_class_ids_od)
+    class_reader = ClassReader(class_ids_od)
 
     return jsonify(list(class_reader.class_ids.values()))
 
@@ -428,7 +428,7 @@ def train_models():
     y_ = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     image_batch_data = image_batch_schema.dump(img_batches, many=True)
-    class_reader_od = ClassReader(known_class_ids_od)
+    class_reader_od = ClassReader(class_ids_od)
     class_reader_acc_prob = ClassReader(known_class_ids_annotation_predictor)
     writer = tf.python_io.TFRecordWriter(
         '/home/schererc/IntelliJProjects/label_server/object_detector/data/train.record')
