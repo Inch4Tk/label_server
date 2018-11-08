@@ -1,4 +1,5 @@
 import json
+import os
 
 class GroundTruthReader:
     def __init__(self, path_to_gt: str):
@@ -9,11 +10,15 @@ class GroundTruthReader:
             containing the ground-truth-data in json-format.
         """
         self.path_to_gt = path_to_gt
-        self.gt_dicts = [{} for _ in range(16)]
+        self.gt_dict = [{} for _ in range(16)]
 
-        for i in range(16):
-            with open('{}_{}.json'.format(path_to_gt, hex(i)[2]), 'r') as f:
-                self.gt_dicts[i] = json.load(f)
+        if os.path.splitext(os.path.basename(path_to_gt))[1] != '.json':
+            for i in range(16):
+                with open('{}_{}.json'.format(path_to_gt, hex(i)[2]), 'r') as f:
+                    self.gt_dict[i] = json.load(f)
+        else:
+            with open(path_to_gt, 'r') as f:
+                self.gt_dict = json.load(f)
 
     def __enter__(self):
         return self
@@ -26,7 +31,13 @@ class GroundTruthReader:
 
         Returns: Ground truth data of the image.
         """
-        char0 = int(image_id[0], 16)
-        if image_id in self.gt_dicts[char0]:
-            return self.gt_dicts[char0][image_id]
-        return []
+        if os.path.splitext(os.path.basename(self.path_to_gt))[1] != '.json':
+            char0 = int(image_id[0], 16)
+            if image_id in self.gt_dict[char0]:
+                return self.gt_dict[char0][image_id]
+            return []
+
+        else:
+            if image_id in self.gt_dict:
+                return self.gt_dict[image_id]
+            return []
