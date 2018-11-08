@@ -1,16 +1,16 @@
 import os
 
-from annotation_predictor.send_od_request import send_od_request
 from annotation_predictor.util.groundtruth_reader import GroundTruthReader
 from annotation_predictor.util.oid_classcode_reader import OIDClassCodeReader
 from annotation_predictor.util.util import compute_iou
+from settings import alpha
 
 evaluation_record = {}
 
 def evaluate_od_performance(path_to_test_images: str, path_to_gt: str):
     """
-    Computes the Intersection over Union for a given test set and the current state of the object
-    detector.
+    Computes the mAP@alpha for a given test set and the current state of the object
+    detector. (modify alpha in settings if necessary)
 
     Args:
         path_to_test_images: test images
@@ -21,7 +21,8 @@ def evaluate_od_performance(path_to_test_images: str, path_to_gt: str):
     oid_classcode_reader = OIDClassCodeReader()
 
     highest_iou = 0
-    iou_buffer = []
+    correct = 0
+    incorrect = 0
 
     for image in os.listdir(path_to_test_images):
         image_id = os.path.splitext(image)[0]
@@ -39,7 +40,10 @@ def evaluate_od_performance(path_to_test_images: str, path_to_gt: str):
                     iou = compute_iou(gt_bb, det_bb)
                     if iou > highest_iou:
                         highest_iou = iou
-                iou_buffer.append(highest_iou)
+                if highest_iou > alpha:
+                    correct += 1
+                else:
+                    incorrect += 1
                 highest_iou = 0
 
-    return sum(iou_buffer) / len(iou_buffer)
+    return correct / (correct + incorrect)
