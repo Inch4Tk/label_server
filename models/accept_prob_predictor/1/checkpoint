@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/schererc/IntelliJProjects/label_server/models/accept_prob_predictor/1/prob_predictor.ckpt"
+all_model_checkpoint_paths: "/home/schererc/IntelliJProjects/label_server/models/accept_prob_predictor/1/prob_predictor.ckpt"
