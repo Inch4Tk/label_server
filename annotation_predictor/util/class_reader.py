@@ -72,7 +72,8 @@ class ClassReader:
         Args:
             cls: name of new class.
         """
-        new_class_key = float(len(self.class_ids) + 1)
-        self.class_ids[new_class_key] = cls
-        with open(self.class_id_file, 'w') as file:
-            json.dump(self.class_ids, file)
+        if cls is not None:
+            new_class_key = float(len(self.class_ids) + 1)
+            self.class_ids[new_class_key] = cls
+            with open(self.class_id_file, 'w') as file:
+                json.dump(self.class_ids, file)

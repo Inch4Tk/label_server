@@ -17,6 +17,6 @@ setup(
         "marshmallow-sqlalchemy==0.13.0",
         "object-detection",
         'tensorflow==1.11.0rc0',
-        'tensorflow-serving-api',
+        'tensorflow-serving-api==1.11.0rc0',
     ],
 )

@@ -46,7 +46,7 @@ rm -rf cocoapi
 
 # From od_models/research/
 protoc object_detection/protos/*.proto --python_out=.
-python setup.py
+python setup.py install
 
 # Add the following line to your .bashrc (set $PATH_TO_PROJECT to your local path)
 export PYTHONPATH=$PYTHONPATH:$PATH_TO_PROJECT/od_models/research:/home/schererc/IntelliJProjects/label_server/od_models/research/slim
@@ -114,7 +114,7 @@ sudo apt-get install nvidia-docker
 
 * Install tensorflow-gpu:
 ```
-pip install tensorflow-gpu
+pip install tensorflow-gpu==1.11.0rc0
 ```
 
 * Build the docker image for GPU usage and use this image to create your containers
@@ -142,7 +142,7 @@ docker build -f docker/Dockerfile_gpu -t labelserver_models_gpu .
 ├── <b>instance</b>: Contains images and videos that shall be labeled
 ├── <b>models</b>: all files that define the neural networks which are used in this project
 │   ├── <b>accept_prob_predictor</b>: binary classifier that rates a bounding box as "good" or "bad"
-│   └── <b>ssdlite_mobilenet_v2_coco_2018_05_09</b>: object detection model from Tensorflow Model Zoo (must be downloaded first)
+│   └── <b>ssd_mobilenet_v1_coco_2018_01_28</b>: object detection model from Tensorflow Model Zoo (must be downloaded first)
 ├── <b>object_detector</b>: all files concerning the object detector
 │   ├── <b>metadata</b>: contains all files needed by the object detector, e.g. classcodes for the classes in the Open Images Dataset
 │   ├── <b>download_od_model.py</b>: downloads a default model from the Tensorflow Model zoo

@@ -16,7 +16,6 @@ from annotation_predictor.util.send_accept_prob_request import send_accept_prob_
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
 from flask_label.database import db
-from flask_label.database_cli import db_update_task
 from flask_label.models import (
     ImageTask, ImageBatch, VideoBatch, image_batch_schema, video_batch_schema, image_task_schema
 )
@@ -39,7 +38,11 @@ def batch_statistics(batch):
     return len(batch["tasks"]), lc
 
 def get_path_to_image(img_id: int):
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+    img_task = None
+
+    while img_task is None:
+        img_task = ImageTask.query.filter_by(id=img_id).first()
+
     img_path = os.path.join(
         current_app.instance_path,
         current_app.config["IMAGE_DIR"],
@@ -50,7 +53,11 @@ def get_path_to_image(img_id: int):
     return img_path
 
 def get_path_to_label(img_id: int):
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+    img_task = None
+
+    while img_task is None:
+        img_task = ImageTask.query.filter_by(id=img_id).first()
+
     path = os.path.join(
         current_app.instance_path,
         current_app.config['IMAGE_DIR'],
@@ -64,7 +71,11 @@ def get_path_to_label(img_id: int):
     return path
 
 def get_path_to_prediction(img_id: int):
-    img_task = ImageTask.query.filter_by(id=img_id).first()
+    img_task = None
+
+    while img_task is None:
+        img_task = ImageTask.query.filter_by(id=img_id).first()
+
     pred_dir_path = os.path.join(
         current_app.instance_path,
         current_app.config["IMAGE_DIR"],
@@ -287,7 +298,6 @@ def serve_image(img_id):
 @api_login_required
 def serve_labels():
     """Serves labels for all images from the instance folder"""
-    db_update_task()
     labels = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     image_batch_data = image_batch_schema.dump(img_batches, many=True)
@@ -320,8 +330,6 @@ def save_labels(img_id):
         os.mkdir(label_path)
 
     save_labels_to_xml(data, label_path)
-
-    db_update_task()
 
     return jsonify(success=True)
 

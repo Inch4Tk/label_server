@@ -8,7 +8,8 @@ from settings import model_dir, path_to_pipeline_config, \
 from object_detector.util import update_finetune_checkpoint
 
 def train():
-    od_model_dir = os.path.join(model_dir, 'ssdlite_mobilenet_v2_coco_2018_05_09')
+    new_ckpt = ''
+    od_model_dir = os.path.join(model_dir, 'ssd_mobilenet_v2_coco_2018_03_29')
 
     existent_checkpoints = [name for name in os.listdir(od_model_dir) if
                             os.path.isdir(os.path.join(od_model_dir, name))]

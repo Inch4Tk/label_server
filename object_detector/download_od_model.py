@@ -10,7 +10,7 @@ def download_od_model():
     Downloads a mobile model from the Tensorflow model zoo and prepares it for usage in
     Tensorflow Serving.
     """
-    model_name = 'ssdlite_mobilenet_v2_coco_2018_05_09'
+    model_name = 'ssd_mobilenet_v2_coco_2018_03_29'
     fname = '{}.tar.gz'.format(model_name)
     url = "http://download.tensorflow.org/models/object_detection/{}".format(fname)
     mobile_dir = os.path.join(model_dir, model_name)
