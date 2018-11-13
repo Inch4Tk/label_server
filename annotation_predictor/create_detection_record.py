@@ -21,7 +21,8 @@ def create_detection_record(path_to_images: str, path_to_json=None):
         images = os.listdir(path_to_images)
         result = {}
         timestamp = datetime.now().strftime('%Y_%m_%d_%H%M%S')
-        path_to_json = os.path.join(annotation_predictor_metadata_dir, '{}.json'.format(timestamp))
+        path_to_json = os.path.join(annotation_predictor_metadata_dir,
+                                    'detection_record_{}.json'.format(timestamp))
         with open(path_to_json, 'w') as f:
             json.dump(result, f)
 

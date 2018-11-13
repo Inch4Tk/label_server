@@ -132,7 +132,7 @@ docker build -f docker/Dockerfile_gpu -t labelserver_models_gpu .
 |   |   └── <b>known_class_ids.json</b>: Contains all classes on which the acceptance probability predictor will be trained
 │   ├── <b>util</b>: utility-functions without a main-directive that are used in other scripts
 │   ├── <b>accept_prob_predictor.py</b>: Contains the architecture definitions, training and prediction functionality
-│   ├── <b>convert_oi_gt_to_jsons.py</b>: Converts ground truth data from the Open Images Dataset to json-format which is used for this project
+│   ├── <b>prepare_groundtruth.py</b>: Download and postprocess groundtruth data of the Open Images Dataset
 │   ├── <b>create_detection_record.py</b>: Create a record of object detections
 │   └── <b>create_training_record.py</b>: Converts a detection_record to a TFRecord which is later used for trainign the acceptance probability predictor
 ├── <b>conda_env.yml</b>: external dependencies of the project
@@ -161,9 +161,12 @@ docker build -f docker/Dockerfile_gpu -t labelserver_models_gpu .
   * adapt the variable **path_to_od_test_data_gt** in settings.py to point to your ground truth data
 * The repository already contains a pretrained version of the acceptance probability predictor
   * If you wish to retrain it, you need a set of images with respective ground truth data
+  * You can use **prepare_groundtruth.py** to download the whole OID groundtruth data
   * First, use create_detection record to create a json-record of the detections
-  * Then, create a training record using **create_training_record**
+  * Then, create an evaluation record using **create_evaluation_record.py**
+  * Then, create a training record using **create_training_record.py**
   * Adapt **path_to_test_data** to point to this file
+  * Train your network by using **accept_prob_predictor.py**
   * **Note**: Training will only work, if your object detector is already trained on the objects
     in your image. For example, for the pretrained version you find here, the Open Images Dataset
     was used which contained instances of all classes of the COCO dataset on which the default

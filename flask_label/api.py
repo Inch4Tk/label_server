@@ -10,8 +10,9 @@ from flask import (
 )
 from object_detection.utils import dataset_util
 
+from annotation_predictor import accept_prob_predictor
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.evaluate_od_performance import evaluate_od_performance
+from annotation_predictor.util.compute_map import compute_map
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
@@ -24,7 +25,7 @@ from object_detector.send_od_request import send_od_request
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 from settings import known_class_ids_annotation_predictor, \
     class_ids_od, path_to_label_performance_log, path_to_od_test_data, \
-    path_to_model_performance_log, path_to_od_test_data_gt, path_to_od_train_record
+    path_to_model_performance_log, path_to_od_test_data_gt, path_to_od_train_record, path_to_map_log
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -202,9 +203,17 @@ def create_tf_example(example):
     classes_text = example[4][:]
     classes = []
 
+    none_vals = []
     for i, cls in enumerate(classes_text):
         if cls is None:
-            classes_text.pop(i)
+            none_vals.append(i)
+
+    for index in sorted(none_vals, reverse=True):
+        classes_text.pop(index)
+        xmins.pop(index)
+        ymins.pop(index)
+        xmaxs.pop(index)
+        ymaxs.pop(index)
 
     for i, cls in enumerate(classes_text):
         classes.append(class_reader.get_index_of_class_from_label(cls))
@@ -354,7 +363,7 @@ def serve_predictions():
                 if len(prediction) > 0:
                     feature_vectors = []
                     for i, _ in enumerate(prediction):
-                        feature_vectors.append(compute_feature_vector(prediction, i))
+                        feature_vectors.append(compute_feature_vector(prediction[i]))
                     acceptance_prediction = send_accept_prob_request(feature_vectors)
 
                     for i, p in enumerate(acceptance_prediction):
@@ -387,7 +396,7 @@ def update_predictions(batch_id):
         if len(prediction) > 0:
             feature_vectors = []
             for i, _ in enumerate(prediction):
-                feature_vectors.append(compute_feature_vector(prediction, i))
+                feature_vectors.append(compute_feature_vector(prediction[i]))
             acceptance_prediction = send_accept_prob_request(feature_vectors)
             for i, p in enumerate(acceptance_prediction):
                 prediction[i]['acceptance_prediction'] = p
@@ -439,18 +448,26 @@ def update_label_performance_log():
 @bp.route('/update_model_performance_log/')
 @api_login_required
 def update_model_performance_log():
-    model_performance = evaluate_od_performance(os.path.join(path_to_od_test_data, 'Tomato'),
-                                                path_to_od_test_data_gt)
+    path_to_test_data = os.path.join(path_to_od_test_data, 'Tomato')
+
+    map_at_2 = compute_map(path_to_test_data, path_to_od_test_data_gt, 2)
+    map_at_5 = compute_map(path_to_test_data, path_to_od_test_data_gt, 5)
+    map_at_10 = compute_map(path_to_test_data, path_to_od_test_data_gt, 10)
+
+    maps = [map_at_2, map_at_5, map_at_10]
 
     log_data = []
 
-    if os.path.exists(path_to_model_performance_log):
-        with open(path_to_model_performance_log, 'r') as f:
+    with open(path_to_model_performance_log, 'w') as f:
+        json.dump(log_data, f)
+
+    if os.path.exists(path_to_map_log):
+        with open(path_to_map_log, 'r') as f:
             log_data = json.load(f)
 
-    log_data.append(model_performance)
+    log_data.append(maps)
 
-    with open(path_to_model_performance_log, 'w') as f:
+    with open(path_to_map_log, 'w') as f:
         json.dump(log_data, f)
 
     return jsonify(success=True)
@@ -468,6 +485,8 @@ def serve_classes():
 def train_models():
     """Checks instance folder for new training data and uses it to further train models"""
     nr_of_labels = 0
+    feature_vectors = []
+    y_ = []
     img_batches = ImageBatch.query.options(db.joinedload('tasks')).all()
     image_batch_data = image_batch_schema.dump(img_batches, many=True)
     class_reader_od = ClassReader(class_ids_od)
@@ -494,9 +513,36 @@ def train_models():
                     if class_id_accept_prob == -1:
                         class_reader_acc_prob.add_class_to_file(cls)
 
+                if classes is not None:
                     tf_example = create_tf_example(
                         [width, height, task['filename'], image_path, classes, boxes])
                     writer.write(tf_example.SerializeToString())
+
+            pred_path = get_path_to_prediction(task['id'])
+            if os.path.exists(pred_path):
+                with open(pred_path, 'r') as f:
+                    predictions = json.load(f)
+                for i, p in enumerate(predictions):
+                    if 'was_successful' in p and not p['was_successful']:
+                        label = p['LabelName']
+                        feature_vectors.append(compute_feature_vector(predictions[i]))
+                        predictions[i]['LabelName'] = label
+
+                        if p['acceptance_prediction'] is 0.0:
+                            y_.append(1.0)
+                        else:
+                            y_.append(0.0)
+
+                        # mark as complete
+                        p['was_successful'] = True
+
+                with open(pred_path, 'w') as f:
+                    json.dump(predictions, f)
+    writer.close()
+
+    if len(feature_vectors) > 0:
+        accept_prob_predictor.main(mode='train', user_feedback={'x': feature_vectors, 'y_': y_})
+
     writer.close()
 
     if nr_of_labels > 0:

@@ -121,7 +121,7 @@ def main(mode: str, user_feedback=None, detections=None):
         # live train mode with user feedback
         else:
             iterations = 1
-            learning_rate = 0.01
+            learning_rate = 0.001
             batch_size = 64
             train_features, train_labels = tf.train.shuffle_batch([user_feedback['x'],
                                                                    user_feedback['y_']],
@@ -222,7 +222,7 @@ def main(mode: str, user_feedback=None, detections=None):
         feature_data = []
         for key in detections:
             for i, _ in enumerate(detections[key]):
-                feature_data.append(compute_feature_vector(detections[key], i))
+                feature_data.append(compute_feature_vector(detections[key][i]))
 
         with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             saver.restore(sess, os.path.join(actual_checkpoint_dir, 'prob_predictor.ckpt'))

@@ -85,7 +85,7 @@ def compute_feature(image_id: str, data: list, gt_reader: GroundTruthReader):
     label_data = []
 
     for i, _ in enumerate(data):
-        feat = compute_feature_vector(data, i)
+        feat = compute_feature_vector(data[i])
         lab = compute_label(data[i], gt, alpha)
         feature_data.append(feat)
         label_data.append(lab)

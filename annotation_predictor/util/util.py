@@ -1,35 +1,35 @@
+import json
 from collections.__init__ import OrderedDict
 
 import numpy as np
 from PIL import Image
 
 from annotation_predictor.util.class_reader import ClassReader
-from settings import known_class_ids_annotation_predictor
+from annotation_predictor.util.oid_classcode_reader import OIDClassCodeReader
+from settings import known_class_ids_annotation_predictor, path_to_model_evaluation_record
 
-def compute_feature_vector(detections: list, position: int) -> list:
+def compute_feature_vector(detection: dict) -> list:
     """
     Compute a feature vector for a detection with the following features:
     (compare https://arxiv.org/abs/1712.08087):
     - score: score of the detection (i.e.: certainty of the object-detector)
     - rel_size: ratio of size of the bounding box of the detection over size of the image
-    - avg: average score of all detections on the image
+    - avg: average score of all detections for the class of the object
     - avg-dif: difference of score (first feature) and avg (third feature)
-    - max_dif: difference of highest score of the image and score (first feature)
+    - max_dif: difference of highest score of the class and current score (first feature)
     - one_hot_encoding: vector with one entry for each class contained in a dataset which has a one
     for the class of the current detections and zeros everywhere else, uniquely defining the class.
     Args:
-        detections: complete detection data for one image
-        position: position of the detection for which the feature vector will be computed
+        detection: a object detection
 
     Returns: feature vector with the above features
     """
     class_reader = ClassReader(known_class_ids_annotation_predictor)
-    detection = detections[position]
     score = float(detection['Confidence'])
     rel_size = get_rel_size(detection)
-    avg = get_avg_score(detections)
+    avg = get_avg_score(detection)
     avg_dif = score - avg
-    max_dif = get_max_score(detections) - score
+    max_dif = get_max_score(detection) - score
     class_index = class_reader.get_index_of_class_from_label(detection['LabelName'])
     # number of classes in oid dataset which is used for base training
     one_hot_encoding = np.zeros(1000)
@@ -38,41 +38,47 @@ def compute_feature_vector(detections: list, position: int) -> list:
     feature_vector.extend(one_hot_encoding)
     return feature_vector
 
-def get_rel_size(detection: OrderedDict) -> float:
+def get_rel_size(detection: dict) -> float:
     """
     Args:
-        detection: detection for which the relative size will be computed.
+        detection: a object detection
 
     Returns: relative size of a bounding box in an image
     """
     return round((float(detection['XMax']) - float(detection['XMin'])) * (
             float(detection['YMax']) - float(detection['YMin'])), 10)
 
-def get_avg_score(detections: list) -> float:
+def get_avg_score(detection: dict) -> float:
     """
     Args:
-        detections: All detections for an image.
+        detection: a object detection
 
-    Returns: average score of those detections.
+    Returns: average score of all detections for this class.
     """
-    avg_score = 0
-    nr_of_detections = len(detections)
-    for i in detections:
-        avg_score += float(i['Confidence']) / nr_of_detections
+    oid_classcode_reader = OIDClassCodeReader()
+
+    with open(path_to_model_evaluation_record, 'r') as f:
+        evaluation_record = json.load(f)
+
+    cls = oid_classcode_reader.get_human_readable_label_for_code(detection['LabelName'])
+    avg_score = evaluation_record[cls][0]
+
     return avg_score
 
-def get_max_score(detections: list) -> float:
+def get_max_score(detection: dict) -> float:
     """
     Args:
-        detections: All detections for an image.
+        detection: a object detection
 
     Returns: maximum of all scores of those detections.
     """
-    max_score = 0
-    for i in detections:
-        conf = float(i['Confidence'])
-        if conf > max_score:
-            max_score = conf
+    oid_classcode_reader = OIDClassCodeReader()
+
+    with open(path_to_model_evaluation_record, 'r') as f:
+        evaluation_record = json.load(f)
+
+    cls = oid_classcode_reader.get_human_readable_label_for_code(detection['LabelName'])
+    max_score = evaluation_record[cls][1]
     return max_score
 
 def compute_iou(det_a: dict, det_b: dict) -> float:

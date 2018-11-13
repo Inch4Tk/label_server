@@ -10,8 +10,10 @@ def concat_detection_record(record1: str, record2: str):
     Concatenates two detection records and saves them in a new file.
 
     Args:
-        record1: Path to first record, saved in a json-file.
+        record1: Path to first record, saved in a json-file
         record2: Path to second record, saved in a json-file
+
+    Returns: path to new file
     """
     timestamp = datetime.now().strftime('%Y_%m_%d_%H%M%S')
     filename = '{}.json'.format(timestamp)
@@ -25,6 +27,8 @@ def concat_detection_record(record1: str, record2: str):
 
     with open(path_to_file, 'w') as f:
         json.dump(r1, f)
+
+    return path_to_file
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

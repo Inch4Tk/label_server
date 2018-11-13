@@ -1,6 +1,6 @@
 import os
 
-#ADAPT
+# ADAPT
 root_dir = '/home/schererc/IntelliJProjects/label_server'
 
 model_dir = os.path.join(root_dir, 'models')
@@ -15,10 +15,22 @@ path_to_label_performance_log = os.path.join(annotation_predictor_metadata_dir,
                                              'label_performance_log.json')
 path_to_model_performance_log = os.path.join(annotation_predictor_metadata_dir,
                                              'model_performance_log.json')
+path_to_map_log = os.path.join(annotation_predictor_metadata_dir,
+                               'model_map_log.json')
+
+train_gt_file = 'train-annotations-bbox.csv'
+test_gt_file = 'test-annotations-bbox.csv'
+val_gt_file = 'validation-annotations-bbox.csv'
+
+path_to_train_gt_file = os.path.join(annotation_predictor_metadata_dir, train_gt_file)
+path_to_test_gt_file = os.path.join(annotation_predictor_metadata_dir, test_gt_file)
+path_to_val_gt_file = os.path.join(annotation_predictor_metadata_dir, val_gt_file)
 
 # ADAPT
 path_to_test_data = os.path.join(annotation_predictor_metadata_dir,
-                                 '2018_09_27_160519_test.tfrecords')
+                                 '2018_11_13_195357_test.tfrecords')
+path_to_model_evaluation_record = os.path.join(annotation_predictor_metadata_dir,
+                                               '2018_11_13_195305_evaluation.json')
 
 # Object Detector
 path_to_od_dir = os.path.join(root_dir, 'object_detector')
@@ -34,7 +46,6 @@ path_to_od_train_record = os.path.join(path_to_od_metadata_dir, 'train.record')
 
 # ADAPT
 path_to_od_test_data_gt = os.path.join(path_to_od_test_data, '2018_11_04_133201.json')
-
 
 # Constants
 verification_time = 1.8  # time for verifying one annotation
