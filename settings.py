@@ -13,8 +13,6 @@ known_class_ids_annotation_predictor = os.path.join(annotation_predictor_metadat
                                                     'known_class_ids.json')
 path_to_label_performance_log = os.path.join(annotation_predictor_metadata_dir,
                                              'label_performance_log.json')
-path_to_model_performance_log = os.path.join(annotation_predictor_metadata_dir,
-                                             'model_performance_log.json')
 path_to_map_log = os.path.join(annotation_predictor_metadata_dir,
                                'model_map_log.json')
 

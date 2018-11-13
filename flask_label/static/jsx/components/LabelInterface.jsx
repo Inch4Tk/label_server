@@ -330,9 +330,7 @@ class LabelInterface extends React.Component {
             //F: falsify proposal
             if (kc === 70) {
                 this.has_changed = true;
-                //don't care about falsified annotation proposals as it was fault of object detector
-                //still set variable to true to mark this proposal as complete
-                pred['was_successful'] = (pred['acceptance_prediction'] === 0);
+                pred['was_successful'] = false;
                 this.log.push([new Date().getTime(), -2]);
             }
 

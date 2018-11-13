@@ -25,7 +25,7 @@ from object_detector.send_od_request import send_od_request
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 from settings import known_class_ids_annotation_predictor, \
     class_ids_od, path_to_label_performance_log, path_to_od_test_data, \
-    path_to_model_performance_log, path_to_od_test_data_gt, path_to_od_train_record, path_to_map_log
+    path_to_od_test_data_gt, path_to_od_train_record, path_to_map_log
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -458,9 +458,6 @@ def update_model_performance_log():
 
     log_data = []
 
-    with open(path_to_model_performance_log, 'w') as f:
-        json.dump(log_data, f)
-
     if os.path.exists(path_to_map_log):
         with open(path_to_map_log, 'r') as f:
             log_data = json.load(f)
@@ -523,18 +520,16 @@ def train_models():
                 with open(pred_path, 'r') as f:
                     predictions = json.load(f)
                 for i, p in enumerate(predictions):
-                    if 'was_successful' in p and not p['was_successful']:
+                    if 'was_successful' in p:
                         label = p['LabelName']
-                        feature_vectors.append(compute_feature_vector(predictions[i]))
                         predictions[i]['LabelName'] = label
 
-                        if p['acceptance_prediction'] is 0.0:
+                        if p['was_successful'] and p['acceptance_prediction'] is 0:
+                            feature_vectors.append(compute_feature_vector(predictions[i]))
                             y_.append(1.0)
-                        else:
+                        elif not p['was_successful'] and p['acceptance_prediction'] is 1:
+                            feature_vectors.append(compute_feature_vector(predictions[i]))
                             y_.append(0.0)
-
-                        # mark as complete
-                        p['was_successful'] = True
 
                 with open(pred_path, 'w') as f:
                     json.dump(predictions, f)
