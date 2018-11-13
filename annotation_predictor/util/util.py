@@ -57,10 +57,13 @@ def get_avg_score(detection: dict) -> float:
     """
     oid_classcode_reader = OIDClassCodeReader()
 
+    cls = detection['LabelName']
+    if detection['LabelName'] in oid_classcode_reader.cc_to_human_readable_dict:
+        cls = oid_classcode_reader.get_human_readable_label_for_code(cls)
+
     with open(path_to_model_evaluation_record, 'r') as f:
         evaluation_record = json.load(f)
 
-    cls = oid_classcode_reader.get_human_readable_label_for_code(detection['LabelName'])
     avg_score = evaluation_record[cls][0]
 
     return avg_score
@@ -74,11 +77,15 @@ def get_max_score(detection: dict) -> float:
     """
     oid_classcode_reader = OIDClassCodeReader()
 
+    cls = detection['LabelName']
+    if detection['LabelName'] in oid_classcode_reader.cc_to_human_readable_dict:
+        cls = oid_classcode_reader.get_human_readable_label_for_code(cls)
+
     with open(path_to_model_evaluation_record, 'r') as f:
         evaluation_record = json.load(f)
 
-    cls = oid_classcode_reader.get_human_readable_label_for_code(detection['LabelName'])
     max_score = evaluation_record[cls][1]
+
     return max_score
 
 def compute_iou(det_a: dict, det_b: dict) -> float:
