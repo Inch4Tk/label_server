@@ -49,7 +49,7 @@ protoc object_detection/protos/*.proto --python_out=.
 python setup.py install
 
 # Add the following line to your .bashrc (set $PATH_TO_PROJECT to your local path)
-export PYTHONPATH=$PYTHONPATH:$PATH_TO_PROJECT/od_models/research:/home/schererc/IntelliJProjects/label_server/od_models/research/slim
+export PYTHONPATH=$PYTHONPATH:$PATH_TO_PROJECT/od_models/research:$PATH_TO_PROJECT/od_models/research/slim
 
 source ~/.bashrc
 ```
