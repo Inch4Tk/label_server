@@ -7,6 +7,11 @@ import numpy as np
 from settings import path_to_label_performance_log, path_to_map_log
 
 def analyze_log():
+    """
+    Analyze the logging data which gets generated during usage of the model.
+    This prints some relevant values and generates figures which discribe the change in performance
+    of the object detector and the average times for different annotation tasks.
+    """
     with open(path_to_label_performance_log, 'r') as f:
         label_log = json.load(f)
 
@@ -44,7 +49,7 @@ def analyze_log():
     print('Hours of labeling: {}'.format(sum([x[1] for x in times]) / 1000 / 60 / 60))
 
     print('Average Time per label: {}'.format(
-        sum([t[1] for t in times]) / len([t for t in times]) / 1000))
+        sum([t[1] for t in times]) / len([t for t in times if t[0] != -2]) / 1000))
 
     time_falsify = round(
         sum([t[1] for t in times if t[0] is -2]) / len([t for t in times if t[0] is -2]), 3)

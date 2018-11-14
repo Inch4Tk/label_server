@@ -33,7 +33,10 @@ path_to_model_evaluation_record = os.path.join(annotation_predictor_metadata_dir
 # Object Detector
 path_to_od_dir = os.path.join(root_dir, 'object_detector')
 path_to_od_metadata_dir = os.path.join(path_to_od_dir, 'metadata')
-path_to_od_test_data = os.path.join(path_to_od_metadata_dir, 'test')
+
+# ADAPT
+path_to_od_test_data = os.path.join(path_to_od_metadata_dir, 'test', 'Tomato')
+
 path_to_od_lib = os.path.join(root_dir, 'od_models', 'research', 'object_detection')
 path_to_pipeline_config = os.path.join(path_to_od_metadata_dir, 'pipeline.config')
 class_ids_od = os.path.join(path_to_od_metadata_dir, 'class_ids.json')

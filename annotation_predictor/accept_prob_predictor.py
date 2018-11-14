@@ -201,9 +201,9 @@ def main(mode: str, user_feedback=None, detections=None):
                                     inputs={'inputs': x},
                                     outputs={'outputs': y})
                         saver.save(sess, os.path.join(new_checkpoint_dir, 'prob_predictor.ckpt'))
-                    elif early_stopping_counter == 50:
-                        print('Stopped early at batch {}/{}'.format(batch_index, iterations))
-                        break
+                    # elif early_stopping_counter == 50:
+                    #     print('Stopped early at batch {}/{}'.format(batch_index, iterations))
+                    #     break
                     else:
                         early_stopping_counter += 1
 
@@ -247,7 +247,7 @@ if __name__ == '__main__':
                         required=False)
     parser.add_argument('--iterations', type=int,
                         help='number of training iterations (relevant for training only)',
-                        default=1000)
+                        default=30000)
     parser.add_argument('--batch_size', type=int,
                         help='size of batches send to model',
                         default=64)

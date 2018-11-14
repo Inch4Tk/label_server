@@ -24,13 +24,21 @@ from object_detector import train_od_model
 from object_detector.send_od_request import send_od_request
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 from settings import known_class_ids_annotation_predictor, \
-    class_ids_od, path_to_label_performance_log, path_to_od_test_data, \
-    path_to_od_test_data_gt, path_to_od_train_record, path_to_map_log
+    class_ids_od, path_to_label_performance_log, path_to_od_test_data_gt, path_to_od_train_record, \
+    path_to_map_log, path_to_test_data
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
 
 def batch_statistics(batch):
+    """
+    Computes the total number of task and the number of labeled tasks in a batch.
+
+    Args:
+        batch: identifier of a batch
+
+    Returns: total number of tasks in batch, number of labeled tasks in batch
+    """
     lc = 0
     for task in batch["tasks"]:
         if task["is_labeled"]:
@@ -39,6 +47,14 @@ def batch_statistics(batch):
     return len(batch["tasks"]), lc
 
 def get_path_to_image(img_id: int):
+    """
+    Computes the path to an image in the instance directory .
+
+    Args:
+        img_id: identifier of an image
+
+    Returns: absolute path to image
+    """
     img_task = None
 
     while img_task is None:
@@ -54,6 +70,14 @@ def get_path_to_image(img_id: int):
     return img_path
 
 def get_path_to_label(img_id: int):
+    """
+    Computes the path to a label belonging to an image in the instance directory .
+
+    Args:
+        img_id: identifier of an image
+
+    Returns: absolute path to label
+    """
     img_task = None
 
     while img_task is None:
@@ -72,6 +96,14 @@ def get_path_to_label(img_id: int):
     return path
 
 def get_path_to_prediction(img_id: int):
+    """
+    Computes the path to a prediction belonging to an image in the instance directory .
+
+    Args:
+        img_id: identifier of an image
+
+    Returns: absolute path to prediction
+    """
     img_task = None
 
     while img_task is None:
@@ -172,7 +204,16 @@ def save_labels_to_xml(data, path):
     elif os.path.exists(path):
         os.remove(path)
 
-def create_tf_example(example):
+def create_tf_example(example: list):
+    """
+    Creates a tf.train.Example object from an image and its labels which can be used in
+    the training pipeline for the object detector.
+
+    Args:
+        example: list containing information about the image and its labels.
+
+    Returns: information of example parsed into a tf.train.Example object
+    """
     width = int(example[0])
     height = int(example[1])
     filename = str.encode(example[2])
@@ -266,6 +307,7 @@ def img_batch(batch_id):
 @bp.route("/img_task/<int:task_id>")
 @api_login_required
 def image_task(task_id):
+    """Return data to a single image task"""
     img_task = ImageTask.query.filter_by(id=task_id).first()
 
     return image_task_schema.jsonify(img_task)
@@ -273,6 +315,7 @@ def image_task(task_id):
 @bp.route("/img_task/random/<int:batch_id>")
 @api_login_required
 def image_task_random(batch_id):
+    """Return a random image task contained in a batch"""
     img_tasks = []
     labeled = request.args.get("labeled")
     if labeled == "true":
@@ -382,7 +425,13 @@ def serve_predictions():
 @bp.route('/update_predictions/<int:batch_id>/')
 @api_login_required
 def update_predictions(batch_id):
-    """Updates predictions for images in instance folder"""
+    """
+    Creates and returns predictions for all images contained in a batch whether predictions already
+    exist in the instance directory or not.
+
+    Args:
+        batch_id: id of the batch for which the predictions will be generated
+    """
     predictions = []
     batch = ImageBatch.query.filter_by(id=batch_id).all()
     batch_data = image_batch_schema.dump(batch, many=True)
@@ -412,6 +461,12 @@ def update_predictions(batch_id):
 @bp.route('/save_predictions/<int:img_id>/', methods=['POST'])
 @api_login_required
 def save_predictions(img_id):
+    """
+    Receives prediction data for an image and saves it in instance directory
+
+    Args:
+        img_id: id of the image for which the predictions will be saved
+    """
     predictions = request.get_json()
 
     pred_path = get_path_to_prediction(img_id)
@@ -431,6 +486,10 @@ def save_predictions(img_id):
 @bp.route('/update_label_performance_log/', methods=['POST'])
 @api_login_required
 def update_label_performance_log():
+    """
+    Receives logging data concerning the type and creation-times for newly added labels and
+    appends them to the label_performance_log.
+    """
     new_log_data = request.get_json()
     log_data = []
 
@@ -448,8 +507,11 @@ def update_label_performance_log():
 @bp.route('/update_model_performance_log/')
 @api_login_required
 def update_model_performance_log():
-    path_to_test_data = os.path.join(path_to_od_test_data, 'Tomato')
-
+    """
+    Normally called after retraining the object-detector, compute the mean average precision for the
+    top 2, top 5 and top 10 detections of the detector respectively for a test set which is defined
+    via the glbal variable path_to_test_data in settings.py
+    """
     map_at_2 = compute_map(path_to_test_data, path_to_od_test_data_gt, 2)
     map_at_5 = compute_map(path_to_test_data, path_to_od_test_data_gt, 5)
     map_at_10 = compute_map(path_to_test_data, path_to_od_test_data_gt, 10)

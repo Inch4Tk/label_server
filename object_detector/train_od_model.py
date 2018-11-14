@@ -8,6 +8,13 @@ from settings import model_dir, path_to_pipeline_config, \
 from object_detector.util import update_finetune_checkpoint
 
 def train():
+    """
+    Retrain the current version of the object detection model.
+    Normally, this function is only called by train_models() in flask_label/api.py.
+    It is assumed that a train record called 'train.record' exists in the metadata directory and
+    that the pipeline.config in the metadata directory is updated accordingly.
+    These assumptions are fulfilled when api.py/train_models is used.
+    """
     new_ckpt = ''
     od_model_dir = os.path.join(model_dir, 'ssd_mobilenet_v2_coco_2018_03_29')
 

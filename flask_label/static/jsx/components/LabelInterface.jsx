@@ -4,6 +4,7 @@ import {Redirect} from "react-router";
 import {AutoCompleter} from "../components/AutoCompleter.jsx"
 
 function render_filename(task, current_task) {
+    //Renders a filename, crosses it out, when a label exists for the task
     if (task === current_task) {
         return <mark>{task.filename}</mark>
     }
@@ -18,7 +19,6 @@ function render_filename(task, current_task) {
 function compute_resize_factor(img_width, img_height) {
     //Resize factor w.r.t. the canvas size (1200,800) s.t. image fits the canvas as well as possible
     //Add a border of width 10 in order to make clicks close to the boarder easier to handle
-
     if (img_width < 1 || img_height < 1) {
         return undefined;
     }
@@ -75,15 +75,16 @@ function compute_iou(annotation, prediction) {
     return intersection_area / (ann_area + pred_area - intersection_area);
 }
 
-function should_have_been_verified(annotation, predictions) {
+function should_have_been_verified(annotation, cls, predictions) {
+    //decides, whether any annotation proposal should have been a verification proposal.
+    //this is the case when a label for the same class gets added with which the proposal
+    //has an intersection over union > 0.5
     for (let i = 0; i < predictions.length; i++) {
         let p = predictions[i];
-        let iou = compute_iou(annotation, p);
-        if (iou > 0.5) {
-            return true;
+        if (p['LabelName'] === cls && p['acceptance_prediction'] === 0 && compute_iou(annotation, p) >= 0.5) {
+            predictions[i]['was_successful'] = false;
         }
     }
-    return false;
 }
 
 class LabelInterface extends React.Component {
@@ -113,6 +114,7 @@ class LabelInterface extends React.Component {
     }
 
     componentDidMount() {
+        //gets called upon start of the component and initializes the state and other variables
         document.addEventListener('keyup', this.handle_keypress);
 
         let task = this.props.task;
@@ -144,6 +146,7 @@ class LabelInterface extends React.Component {
     }
 
     componentWillUnmount() {
+        //gets called when component is exited, tears component down and starts backend updates
         document.removeEventListener('keydown', this.handle_keypress);
         if (this.has_changed) {
             //do not save annotations that are deleted at this point
@@ -180,6 +183,7 @@ class LabelInterface extends React.Component {
     }
 
     handle_click(event) {
+        // log a click on image and map it to an extreme point for extreme clicking
         let newState = this.state;
 
         if (newState.need_label) {
@@ -211,6 +215,7 @@ class LabelInterface extends React.Component {
     }
 
     track_mouse_position(event) {
+        //helping function which tracks the mouse_position
         try {
             let img_width = this.image.width;
             let img_height = this.image.height;
@@ -227,6 +232,7 @@ class LabelInterface extends React.Component {
     }
 
     handle_keypress(key) {
+        //maps functionality to different keys of keyboard
         let newState = this.state;
         let kc = key.keyCode;
 
@@ -364,6 +370,7 @@ class LabelInterface extends React.Component {
     }
 
     handle_submit(event) {
+        //handles submit of class name from react-autosuggest
         event.preventDefault();
         let label = this._auto_completer.getValue();
         let newState = this.state;
@@ -381,6 +388,7 @@ class LabelInterface extends React.Component {
     }
 
     render_image(alpha) {
+        //renders the image with opacity of alpha
         try {
             let img_width = this.image.width;
             let img_height = this.image.height;
@@ -455,6 +463,7 @@ class LabelInterface extends React.Component {
     }
 
     load_image(url) {
+        //loads an image from its source
         let image = new Image();
         image.onload = this.render_image.bind(this);
         image.src = url;
@@ -462,6 +471,7 @@ class LabelInterface extends React.Component {
     }
 
     add_new_bounding_box() {
+        //adds a new bounding box from extreme points, then deletes those points
         let newState = this.state;
         let width = this.image.width;
         let height = this.image.height;
@@ -486,8 +496,7 @@ class LabelInterface extends React.Component {
             b[1] = b[1] / this.resize_factor / width;
             b[2] = b[2] / this.resize_factor / height;
             b[3] = b[3] / this.resize_factor / height;
-            let relevant_predictions = newState.predictions.filter(p => p['LabelName'] === cls);
-            pred['was_successful'] = !should_have_been_verified(b, relevant_predictions);
+            should_have_been_verified(b, cls, newState.predictions);
             pred['label_index'] = newState.classes.length;
             newState.classes.push(cls);
 
@@ -521,6 +530,7 @@ class LabelInterface extends React.Component {
     }
 
     render() {
+        //general render function for all components of the LabelInterface
         if (this.state.redirect) {
             return <Redirect push to={this.state.redirect}/>;
         }

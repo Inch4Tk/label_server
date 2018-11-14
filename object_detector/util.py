@@ -5,6 +5,10 @@ from settings import class_ids_od, path_to_known_class_pbtxt, \
     path_to_pipeline_config
 
 def parse_class_ids_json_to_pbtxt():
+    """
+    Parse all classes from the class_ids_od file and generate a protobuf file based on it
+    which is used by the training pipeline for the object detector
+    """
     with open(class_ids_od, 'r') as f:
         data = json.load(f)
     ids = list(data.keys())
@@ -24,6 +28,9 @@ def parse_class_ids_json_to_pbtxt():
         f.write(out)
 
 def update_number_of_classes():
+    """
+    Update the number of classes in the training configuration based on the known_class_ids file
+    """
     class_reader = ClassReader(class_ids_od)
     nr_of_classes = len(class_reader.class_ids)
     with open(path_to_pipeline_config, 'r') as f:
@@ -35,6 +42,10 @@ def update_number_of_classes():
         f.writelines(data)
 
 def update_finetune_checkpoint(path_to_new_checkpoint):
+    """
+    Update the path to the checkpoint directory which should be retrained to the newest checkpoint
+    directory
+    """
     with open(path_to_pipeline_config, 'r') as f:
         data = f.readlines()
 
