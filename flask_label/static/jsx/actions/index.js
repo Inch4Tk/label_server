@@ -173,28 +173,28 @@ function savePredictions(id, predictions) {
     });
 }
 
-function updateLabelPerformanceLog(log) {
-    return fetch('/api/update_label_performance_log/', {
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/json; charset=utf-8",
-        },
-        body: JSON.stringify(log)
-    });
-}
+// function updateLabelPerformanceLog(log) {
+//     return fetch('/api/update_label_performance_log/', {
+//         method: 'POST',
+//         headers: {
+//             "Content-Type": "application/json; charset=utf-8",
+//         },
+//         body: JSON.stringify(log)
+//     });
+// }
 
-function updateModelPerformanceLog() {
-    return fetch('/api/update_model_performance_log/')
-        .then(
-            response => response.json(),
-            error => console.log('An error occurred.', error)
-        );
-}
+// function updateModelPerformanceLog() {
+//     return fetch('/api/update_model_performance_log/')
+//         .then(
+//             response => response.json(),
+//             error => console.log('An error occurred.', error)
+//         );
+// }
 
 function updateMetadata(id, labels, predictions, log) {
     return Promise.all([saveLabels(id, labels),
-        savePredictions(id, predictions),
-        updateLabelPerformanceLog(log)])
+        savePredictions(id, predictions)])
+        // updateLabelPerformanceLog(log)])
 }
 
 export function trainModels(batch_id) {
@@ -209,7 +209,7 @@ export function trainModels(batch_id) {
             .then(
                 () => {
                     store.dispatch(updatePredictions(batch_id))
-                        .then(updateModelPerformanceLog())
+                        // .then(updateModelPerformanceLog())
                         .then(store.dispatch(setIsNotTraining()))
                 }
             )
