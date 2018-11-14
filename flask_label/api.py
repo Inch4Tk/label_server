@@ -12,7 +12,6 @@ from object_detection.utils import dataset_util
 
 from annotation_predictor import accept_prob_predictor
 from annotation_predictor.util.class_reader import ClassReader
-from annotation_predictor.util.compute_map import compute_map
 from annotation_predictor.util.send_accept_prob_request import send_accept_prob_request
 from annotation_predictor.util.util import compute_feature_vector
 from flask_label.auth import api_login_required
@@ -24,8 +23,7 @@ from object_detector import train_od_model
 from object_detector.send_od_request import send_od_request
 from object_detector.util import parse_class_ids_json_to_pbtxt, update_number_of_classes
 from settings import known_class_ids_annotation_predictor, \
-    class_ids_od, path_to_label_performance_log, path_to_od_test_data_gt, path_to_od_train_record, \
-    path_to_map_log, path_to_test_data
+    class_ids_od, path_to_od_train_record
 
 bp = Blueprint("api", __name__,
                url_prefix="/api")
@@ -483,53 +481,53 @@ def save_predictions(img_id):
 
     return jsonify(success=True)
 
-@bp.route('/update_label_performance_log/', methods=['POST'])
-@api_login_required
-def update_label_performance_log():
-    """
-    Receives logging data concerning the type and creation-times for newly added labels and
-    appends them to the label_performance_log.
-    """
-    new_log_data = request.get_json()
-    log_data = []
-
-    if os.path.exists(path_to_label_performance_log):
-        with open(path_to_label_performance_log, 'r') as f:
-            log_data = json.load(f)
-
-    log_data.extend(new_log_data)
-
-    with open(path_to_label_performance_log, 'w') as f:
-        json.dump(log_data, f)
-
-    return jsonify(success=True)
-
-@bp.route('/update_model_performance_log/')
-@api_login_required
-def update_model_performance_log():
-    """
-    Normally called after retraining the object-detector, compute the mean average precision for the
-    top 2, top 5 and top 10 detections of the detector respectively for a test set which is defined
-    via the glbal variable path_to_test_data in settings.py
-    """
-    map_at_2 = compute_map(path_to_test_data, path_to_od_test_data_gt, 2)
-    map_at_5 = compute_map(path_to_test_data, path_to_od_test_data_gt, 5)
-    map_at_10 = compute_map(path_to_test_data, path_to_od_test_data_gt, 10)
-
-    maps = [map_at_2, map_at_5, map_at_10]
-
-    log_data = []
-
-    if os.path.exists(path_to_map_log):
-        with open(path_to_map_log, 'r') as f:
-            log_data = json.load(f)
-
-    log_data.append(maps)
-
-    with open(path_to_map_log, 'w') as f:
-        json.dump(log_data, f)
-
-    return jsonify(success=True)
+# @bp.route('/update_label_performance_log/', methods=['POST'])
+# @api_login_required
+# def update_label_performance_log():
+#     """
+#     Receives logging data concerning the type and creation-times for newly added labels and
+#     appends them to the label_performance_log.
+#     """
+#     new_log_data = request.get_json()
+#     log_data = []
+#
+#     if os.path.exists(path_to_label_performance_log):
+#         with open(path_to_label_performance_log, 'r') as f:
+#             log_data = json.load(f)
+#
+#     log_data.extend(new_log_data)
+#
+#     with open(path_to_label_performance_log, 'w') as f:
+#         json.dump(log_data, f)
+#
+#     return jsonify(success=True)
+#
+# @bp.route('/update_model_performance_log/')
+# @api_login_required
+# def update_model_performance_log():
+#     """
+#     Normally called after retraining the object-detector, compute the mean average precision for the
+#     top 2, top 5 and top 10 detections of the detector respectively for a test set which is defined
+#     via the glbal variable path_to_test_data in settings.py
+#     """
+#     map_at_2 = compute_map(path_to_test_data, path_to_od_test_data_gt, 2)
+#     map_at_5 = compute_map(path_to_test_data, path_to_od_test_data_gt, 5)
+#     map_at_10 = compute_map(path_to_test_data, path_to_od_test_data_gt, 10)
+#
+#     maps = [map_at_2, map_at_5, map_at_10]
+#
+#     log_data = []
+#
+#     if os.path.exists(path_to_map_log):
+#         with open(path_to_map_log, 'r') as f:
+#             log_data = json.load(f)
+#
+#     log_data.append(maps)
+#
+#     with open(path_to_map_log, 'w') as f:
+#         json.dump(log_data, f)
+#
+#     return jsonify(success=True)
 
 @bp.route("/serve_classes/")
 @api_login_required

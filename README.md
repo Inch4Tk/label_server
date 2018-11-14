@@ -147,12 +147,12 @@ docker build -f docker/Dockerfile_gpu -t labelserver_models_gpu .
 </pre>
 
 ## Preparing the application
-* Download the object detection model by executing
+* Download the object detection model from the [Tensorflow Model Zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) by executing
  ```
  python object_detector/download_od_model.py
  ```
 * Add the images you want to label to **instance/images** or videos to **instance/videos**
-* If you have test sets for your classes, add the test images and your ground-truth in json-format 
+* PURELY OPTIONAL: If you have test sets for your classes, add the test images and your ground-truth in json-format 
   to **object_detector/metadata/test** 
   * if your ground truth is in csv-format you need to convert it to json-format by using
  ```
@@ -161,7 +161,7 @@ docker build -f docker/Dockerfile_gpu -t labelserver_models_gpu .
  # adapt the variable path_to_od_test_data_gt in settings.py to point to your ground truth data json
  ```
 * The repository already contains a pretrained version of the acceptance probability predictor
-  * If you wish to retrain it, you need a set of images with respective ground truth data
+  * **If you wish to retrain it manually**, you need a set of images with respective ground truth data
     * If you want to use images from the OID. you can use **prepare_groundtruth.py** to download the 
       whole OID groundtruth data
   * First, use create_detection record to create a json-record of the detections
